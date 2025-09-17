@@ -1,5 +1,0 @@
-packages:
-  - "packages/shared"
-  - "apps/admin"
-  - "apps/client"
-  - "apps/homepage"
