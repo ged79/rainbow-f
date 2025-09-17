@@ -86,7 +86,7 @@ export default function CategorySectionMobile({
           <div 
             ref={scrollRef}
             className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitScrollbar: { display: 'none' } }}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
           >
             {products.map((product) => (
               <div key={product.id} className="flex-none w-[160px] snap-start">

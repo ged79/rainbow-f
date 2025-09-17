@@ -19,7 +19,8 @@ export async function checkRateLimit(identifier: string): Promise<boolean> {
   
   // Cleanup old entries (1% chance)
   if (Math.random() < 0.01) {
-    for (const [key, value] of requestCounts.entries()) {
+    const entries = Array.from(requestCounts.entries());
+    for (const [key, value] of entries) {
       if (value.every(ts => ts < windowStart)) {
         requestCounts.delete(key)
       }

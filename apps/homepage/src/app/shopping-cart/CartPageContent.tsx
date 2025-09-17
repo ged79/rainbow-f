@@ -674,7 +674,7 @@ export default function CartPageContent() {
                             <div className="flex items-center justify-between mb-2">
                               <p className="text-sm font-medium text-green-800">배송 완료</p>
                               <p className="text-xs text-gray-600">
-                                {order.completed_at ? new Date(order.completed_at).toLocaleString() : ''}
+                                {(order as any).completed_at ? new Date((order as any).completed_at).toLocaleString() : ''}
                               </p>
                             </div>
                             

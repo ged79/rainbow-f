@@ -6,7 +6,7 @@ import EmotionalNavbar from '../../components/EmotionalNavbar'
 import PaymentModal from '../../components/PaymentModal'
 import { Heart, ShoppingCart, Minus, Plus, MapPin, Calendar, Clock } from 'lucide-react'
 import { getProduct } from '../../lib/products'
-import type { CreateOrderInput, ProductType } from '@flower/shared/types'
+import type { CreateOrderInput, ProductType } from '../../shared/types/index'
 
 declare global {
   interface Window {
@@ -18,7 +18,7 @@ const OrderPage = () => {
   const [quantity, setQuantity] = useState(1)
   const [showPayment, setShowPayment] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [product, setProduct] = useState(null)
+  const [product, setProduct] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState('')
   const [isWishlisted, setIsWishlisted] = useState(false)

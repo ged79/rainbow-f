@@ -1,5 +1,5 @@
 import { productsByCategory } from './categoryProducts'
-import type { Product } from '../types'
+// import type { Product } from '../types'
 
 // Get recommended products based on current product - static data version
 export const getRecommendedProducts = (currentProduct: any) => {
@@ -39,7 +39,7 @@ export const getRecommendedProducts = (currentProduct: any) => {
       }
       
       // Has discount: +10 points
-      if (product.originalPrice) score += 10
+      if ((product as any).originalPrice) score += 10
       
       // Random factor for variety: +0-10 points
       score += Math.random() * 10
@@ -55,22 +55,22 @@ export const getRecommendedProducts = (currentProduct: any) => {
 // Get single product from static data
 export const getProduct = (id: string) => {
   const allProducts = {
-    ...productsByCategory.opening.reduce((acc, product) => {
+    ...productsByCategory.opening.reduce((acc: any, product) => {
       acc[product.id] = { ...product, category: '개업·행사', productType: '축하화환' }
       return acc
-    }, {}),
-    ...productsByCategory.wedding.reduce((acc, product) => {
+    }, {} as any),
+    ...productsByCategory.wedding.reduce((acc: any, product) => {
       acc[product.id] = { ...product, category: '결혼식', productType: '꽃다발' }
       return acc
-    }, {}),
-    ...productsByCategory.funeral.reduce((acc, product) => {
+    }, {} as any),
+    ...productsByCategory.funeral.reduce((acc: any, product) => {
       acc[product.id] = { ...product, category: '장례식', productType: '근조화환' }
       return acc
-    }, {}),
-    ...productsByCategory.anniversary.reduce((acc, product) => {
+    }, {} as any),
+    ...productsByCategory.anniversary.reduce((acc: any, product) => {
       acc[product.id] = { ...product, category: '승진·기념일', productType: '축하화환' }
       return acc
-    }, {})
+    }, {} as any)
   }
   
   return allProducts[id] || null

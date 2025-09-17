@@ -19,7 +19,7 @@ export async function checkDatabaseCategories() {
     }
     
     // Get unique category_1 values
-    const uniqueCategory1 = [...new Set(data?.map(p => p.category_1) || [])]
+    const uniqueCategory1 = Array.from(new Set(data?.map(p => p.category_1) || []))
     console.log('Unique category_1 values in database:', uniqueCategory1)
     
     // Count products per category_1
@@ -36,7 +36,7 @@ export async function checkDatabaseCategories() {
     // Show some actual character codes to debug encoding
     uniqueCategory1.forEach(cat => {
       console.log(`Category: "${cat}", Character codes:`, 
-        Array.from(cat).map(c => `${c}(${c.charCodeAt(0)})`).join(' ')
+        Array.from(cat).map((c: any) => `${c}(${c.charCodeAt(0)})`).join(' ')
       )
     })
     

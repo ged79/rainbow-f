@@ -6,7 +6,7 @@ import EmotionalNavbar from '../../components/EmotionalNavbar'
 import PaymentModal from '../../components/PaymentModal'
 import { Heart, ShoppingCart, Minus, Plus, MapPin, Calendar, Clock, ChevronLeft, Check, X } from 'lucide-react'
 import { getProduct } from '../../lib/products'
-import type { CreateOrderInput, ProductType } from '@flower/shared/types'
+import type { CreateOrderInput, ProductType } from '../../shared/types/index'
 
 declare global {
   interface Window {
@@ -18,7 +18,7 @@ const OrderPage = () => {
   const [quantity, setQuantity] = useState(1)
   const [showPayment, setShowPayment] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [product, setProduct] = useState(null)
+  const [product, setProduct] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState('')
   const [isWishlisted, setIsWishlisted] = useState(false)
@@ -112,7 +112,7 @@ const OrderPage = () => {
         return false
       }
       const address = orderData.recipient_address
-      if (!address || !address.detail) {
+      if (!address || (typeof address === 'string' ? !address : !address.detail)) {
         alert('배송 주소를 입력해주세요.')
         return false
       }

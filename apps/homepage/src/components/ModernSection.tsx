@@ -209,9 +209,8 @@ export default function ModernSection({ title, subtitle, products = [], bgColor,
               className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
               style={{ 
                 scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                WebkitScrollbar: { display: 'none' }
-              }}
+                msOverflowStyle: 'none'
+              } as React.CSSProperties}
             >
               {products && products.length > 0 ? products.map((product) => (
                 <div 

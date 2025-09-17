@@ -8,18 +8,17 @@ import EmotionalNavbar from '@/components/EmotionalNavbar'
 import ProductImageGallery from '@/components/ProductImageGallery'
 
 import { getProductById, getRecommendedProducts } from '@/services/productService'
-import type { Product } from '@/services/productService'
 
 export default function ProductDetailPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const productId = searchParams.get('id')
   
-  const [product, setProduct] = useState<Product | null>(null)
+  const [product, setProduct] = useState<any | null>(null)
   const [quantity, setQuantity] = useState(1)
 
   const [isWishlisted, setIsWishlisted] = useState(false)
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -46,7 +45,7 @@ export default function ProductDetailPage() {
       }
       
       setProduct(productData)
-      setMessage(productData.flowerMessage || '')
+      setMessage((productData as any)?.flowerMessage || '')
       
       // 관련 상품 가져오기
       const recommended = await getRecommendedProducts(productData, 4)

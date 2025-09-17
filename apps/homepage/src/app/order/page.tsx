@@ -449,7 +449,7 @@ const OrderPage = () => {
       deliveryDate: orderData.delivery_date,
       deliveryTime: orderData.delivery_time,
       message: orderData.special_instructions,
-      ribbonMessage: orderData.ribbon_text?.[0] || '',
+      ribbonMessage: orderData.ribbon_text || '',
       totalAmount: product.price * quantity - discountAmount,
       total_amount: product.price * quantity - discountAmount,
       discountAmount: discountAmount,
@@ -896,8 +896,8 @@ const OrderPage = () => {
                         type="radio"
                         name="ribbon"
                         value={message}
-                        checked={orderData.ribbon_text?.[0] === message}
-                        onChange={(e) => setOrderData({...orderData, ribbon_text: [e.target.value]})}
+                        checked={orderData.ribbon_text === message}
+                        onChange={(e) => setOrderData({...orderData, ribbon_text: e.target.value})}
                         className="mr-2"
                       />
                       <span className="text-xs">{message}</span>
@@ -906,8 +906,8 @@ const OrderPage = () => {
                 </div>
                 <input
                   type="text"
-                  value={orderData.ribbon_text?.[0] === '' || !getRibbonMessages(orderData.product_type).includes(orderData.ribbon_text?.[0] || '') ? orderData.ribbon_text?.[0] || '' : ''}
-                  onChange={(e) => setOrderData({...orderData, ribbon_text: [e.target.value]})}
+                  value={orderData.ribbon_text === '' || !getRibbonMessages(orderData.product_type).includes(orderData.ribbon_text || '') ? orderData.ribbon_text || '' : ''}
+                  onChange={(e) => setOrderData({...orderData, ribbon_text: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="직접 입력"
                 />
