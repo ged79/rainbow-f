@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-08-27T01:08:38.968Z",
+  "backupDirectory": "C:\\work_station\\flower\\apps\\client\\console-backup-2025-08-27T01-08-38",
+  "statistics": {
+    "filesProcessed": 27,
+    "statementsRemoved": 5,
+    "filesWithErrors": 0
+  },
+  "errors": [],
+  "originalReport": "console-statements.json"
+}

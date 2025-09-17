@@ -1,0 +1,12 @@
+{
+  "name": "BLOOM - 프리미엄 꽃배달",
+  "short_name": "BLOOM",
+  "description": "신선한 꽃으로 마음을 전하세요",
+  "theme_color": "#ef4444",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": []
+}

@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "dom", "dom.iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "jsx": "preserve",
+    
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    
+    "incremental": true,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    
+    "baseUrl": ".",
+    "paths": {
+      "@flower/shared/*": ["packages/shared/src/*"],
+      "@flower/ui/*": ["packages/ui/src/*"],
+      "@flower/database/*": ["packages/database/src/*"]
+    }
+  },
+  "include": [],
+  "exclude": ["node_modules"]
+}

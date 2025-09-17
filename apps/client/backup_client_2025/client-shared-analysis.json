@@ -1,0 +1,258 @@
+{
+  "clientImports": [
+    {
+      "module": "utils",
+      "item": "formatCurrency",
+      "usedIn": 7,
+      "files": [
+        "src\\app\\(dashboard)\\dashboard\\page.tsx",
+        "src\\app\\(dashboard)\\layout.tsx",
+        "src\\app\\(dashboard)\\orders\\page.tsx"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "Store",
+      "usedIn": 5,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\new\\page.tsx",
+        "src\\services\\api.ts",
+        "src\\services\\storeService.ts"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "Order",
+      "usedIn": 3,
+      "files": [
+        "src\\app\\(dashboard)\\dashboard\\page.tsx",
+        "src\\services\\api.ts",
+        "src\\types\\fixes.ts"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "OrderWithStores",
+      "usedIn": 3,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\page.tsx",
+        "src\\app\\(dashboard)\\orders\\[id]\\page.tsx",
+        "src\\services\\api.ts"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "CreateOrderInput",
+      "usedIn": 2,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\new\\page.tsx",
+        "src\\services\\api.ts"
+      ]
+    },
+    {
+      "module": "constants",
+      "item": "PRODUCT_CATEGORIES",
+      "usedIn": 2,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\new\\page.tsx",
+        "src\\app\\(dashboard)\\orders\\[id]\\page.tsx"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "OrderStatus",
+      "usedIn": 2,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\[id]\\page.tsx",
+        "src\\services\\api.ts"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "PointTransaction",
+      "usedIn": 2,
+      "files": [
+        "src\\app\\(dashboard)\\points\\page.tsx",
+        "src\\services\\api.ts"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "ProductType",
+      "usedIn": 1,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\new\\page.tsx"
+      ]
+    },
+    {
+      "module": "constants",
+      "item": "ORDER_STATUS",
+      "usedIn": 1,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\page.tsx"
+      ]
+    },
+    {
+      "module": "utils",
+      "item": "formatPhone",
+      "usedIn": 1,
+      "files": [
+        "src\\app\\(dashboard)\\orders\\[id]\\page.tsx"
+      ]
+    },
+    {
+      "module": "types",
+      "item": "Settlement",
+      "usedIn": 1,
+      "files": [
+        "src\\services\\api.ts"
+      ]
+    }
+  ],
+  "sharedExports": [
+    {
+      "module": "types",
+      "exports": 26,
+      "items": [
+        "all",
+        "// Product and Order Types\n  type ProductType",
+        "type OrderType",
+        "// API Input Types\n  type CreateOrderInput",
+        "type CompleteOrderInput",
+        "type RegistrationData",
+        "type TenantConfig",
+        "// Enums\n  PointTransactionType",
+        "SettlementStatus",
+        "// Core Database Types\n  type Store",
+        "type Order",
+        "type OrderWithStores",
+        "type PointTransaction",
+        "type Settlement",
+        "type SessionContext",
+        "// Status Types\n  type StoreStatus",
+        "type OrderStatus",
+        "// Common Types\n  type Json",
+        "type UUID",
+        "type Timestamp",
+        "// Address Type\n  type Address",
+        "// Customer/Recipient Types\n  type Customer",
+        "type Recipient",
+        "// Product Type\n  type Product",
+        "// Payment Type\n  type Payment",
+        "business"
+      ]
+    },
+    {
+      "module": "utils",
+      "exports": 0,
+      "items": []
+    },
+    {
+      "module": "constants",
+      "exports": 12,
+      "items": [
+        "const",
+        "const",
+        "const",
+        "const",
+        "enum",
+        "enum",
+        "enum",
+        "const",
+        "const",
+        "const",
+        "const",
+        "const"
+      ]
+    }
+  ],
+  "mismatches": [
+    {
+      "module": "types",
+      "item": "Order",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 3
+    },
+    {
+      "module": "utils",
+      "item": "formatCurrency",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 7
+    },
+    {
+      "module": "types",
+      "item": "CreateOrderInput",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 2
+    },
+    {
+      "module": "types",
+      "item": "Store",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 5
+    },
+    {
+      "module": "types",
+      "item": "ProductType",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 1
+    },
+    {
+      "module": "constants",
+      "item": "PRODUCT_CATEGORIES",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 2
+    },
+    {
+      "module": "types",
+      "item": "OrderWithStores",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 3
+    },
+    {
+      "module": "constants",
+      "item": "ORDER_STATUS",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 1
+    },
+    {
+      "module": "types",
+      "item": "OrderStatus",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 2
+    },
+    {
+      "module": "utils",
+      "item": "formatPhone",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 1
+    },
+    {
+      "module": "types",
+      "item": "PointTransaction",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 2
+    },
+    {
+      "module": "types",
+      "item": "Settlement",
+      "issue": "Not exported from shared",
+      "severity": "high",
+      "usedIn": 1
+    }
+  ],
+  "recommendations": [
+    "⚠️  Fix mismatches before deployment - shared package needs updates"
+  ]
+}

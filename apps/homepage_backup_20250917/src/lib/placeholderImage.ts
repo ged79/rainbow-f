@@ -1,0 +1,2 @@
+// 실제 public 폴더의 이미지와 매핑된 간단한 placeholder 이미지
+export const placeholderImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23f3f4f6'/%3E%3Ctext x='200' y='200' text-anchor='middle' dy='.3em' fill='%239ca3af' font-family='sans-serif' font-size='24'%3E이미지 준비중%3C/text%3E%3C/svg%3E";
