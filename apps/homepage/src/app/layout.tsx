@@ -71,6 +71,15 @@ export default function RootLayout({
         <script src="https://developers.kakao.com/sdk/js/kakao.min.js" async></script>
       </head>
       <body className="min-h-screen bg-gradient-to-b from-gray-50 to-white font-serif antialiased">
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js');
+              });
+            }
+          `
+        }} />
         <ErrorBoundary>
           {children}
           <Footer />
