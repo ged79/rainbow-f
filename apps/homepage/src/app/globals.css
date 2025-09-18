@@ -94,4 +94,39 @@
   .serif-font {
     font-family: 'Gowun Batang', 'Noto Serif KR', serif;
   }
+  
+  /* PWA 설치 프롬프트 애니메이션 */
+  @keyframes slide-up {
+    from { 
+      transform: translateY(100%); 
+      opacity: 0; 
+    }
+    to { 
+      transform: translateY(0); 
+      opacity: 1; 
+    }
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+  
+  /* 모바일 탭 하이라이트 제거 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* iOS 바운스 스크롤 비활성화 */
+  body {
+    overscroll-behavior: none;
+  }
+  
+  /* 안전 영역 패딩 (노치 대응) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

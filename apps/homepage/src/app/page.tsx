@@ -4,6 +4,7 @@ export const revalidate = 0
 import ModernHero from '../components/ModernHero'
 import EmotionalNavbar from '../components/EmotionalNavbar'
 import ModernSection from '../components/ModernSection'
+import PWAInstallPrompt from '../components/PWAInstallPrompt'
 import { getProductsByCategory } from '../services/productService'
 
 export default async function HomePage() {
@@ -19,6 +20,7 @@ export default async function HomePage() {
     <main className="bg-white">
       <EmotionalNavbar />
       <ModernHero />
+      <PWAInstallPrompt />
       
       {/* 결혼식 섹션 */}
       <div className="mt-8 md:mt-0">

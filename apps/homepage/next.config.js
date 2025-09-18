@@ -1,5 +1,39 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // PWA 설정
+  headers: async () => [
+    {
+      source: '/service-worker.js',
+      headers: [
+        {
+          key: 'Service-Worker-Allowed',
+          value: '/',
+        },
+        {
+          key: 'Cache-Control',
+          value: 'no-cache, no-store, must-revalidate',
+        },
+      ],
+    },
+    {
+      source: '/:path*',
+      headers: [
+        {
+          key: 'X-Content-Type-Options',
+          value: 'nosniff',
+        },
+        {
+          key: 'X-Frame-Options',
+          value: 'DENY',
+        },
+        {
+          key: 'X-XSS-Protection',
+          value: '1; mode=block',
+        },
+      ],
+    },
+  ],
+  
   // 이미지 최적화 설정 (단순화)
   images: {
     // WebP만 사용 (AVIF는 너무 느림)
