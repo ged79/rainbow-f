@@ -1,12 +1,12 @@
 /**
  * 데이터 암호화 유틸리티
- * AES-256-GCM 암호화 사용
+ * AES-256-CBC 암호화 사용
  */
 
 import crypto from 'crypto'
 
 class EncryptionService {
-  private algorithm = 'aes-256-gcm'
+  private algorithm = 'aes-256-cbc'
   private secretKey: Buffer
   
   constructor() {
@@ -32,11 +32,8 @@ class EncryptionService {
       let encrypted = cipher.update(text, 'utf8', 'hex')
       encrypted += cipher.final('hex')
       
-      // 인증 태그 가져오기
-      const authTag = cipher.getAuthTag()
-      
-      // IV + authTag + 암호문을 하나의 문자열로 결합
-      const combined = Buffer.concat([iv, authTag, Buffer.from(encrypted, 'hex')])
+      // IV + 암호문을 하나의 문자열로 결합
+      const combined = Buffer.concat([iv, Buffer.from(encrypted, 'hex')])
       
       return combined.toString('base64')
     } catch (error) {
@@ -55,16 +52,13 @@ class EncryptionService {
       // base64 디코딩
       const combined = Buffer.from(encryptedText, 'base64')
       
-      // IV, authTag, 암호문 분리
+      // IV 추출
       const iv = combined.slice(0, 16)
-      const authTag = combined.slice(16, 32)
-      const encrypted = combined.slice(32)
+      const encrypted = combined.slice(16)
       
-      // 복호화 객체 생성
+      // 복호화
       const decipher = crypto.createDecipheriv(this.algorithm, this.secretKey, iv)
-      decipher.setAuthTag(authTag)
       
-      // 복호화 수행
       let decrypted = decipher.update(encrypted, undefined, 'utf8')
       decrypted += decipher.final('utf8')
       
@@ -76,141 +70,144 @@ class EncryptionService {
   }
 
   /**
-   * 전화번호 마스킹 (표시용)
-   * 010-1234-5678 -> 010-****-5678
+   * 객체 암호화
    */
-  maskPhone(phone: string): string {
-    if (!phone) return ''
-    const cleaned = phone.replace(/[^0-9]/g, '')
-    if (cleaned.length < 10) return phone
-    
-    const masked = cleaned.slice(0, 3) + '****' + cleaned.slice(-4)
-    return masked.slice(0, 3) + '-' + masked.slice(3, 7) + '-' + masked.slice(7)
+  encryptObject(obj: any): string {
+    return this.encrypt(JSON.stringify(obj))
   }
 
   /**
-   * 이메일 마스킹 (표시용)
-   * user@example.com -> u***@example.com
+   * 객체 복호화
+   */
+  decryptObject<T = any>(encryptedText: string): T {
+    const decrypted = this.decrypt(encryptedText)
+    return JSON.parse(decrypted)
+  }
+
+  /**
+   * 민감정보 마스킹
+   * ex) 전화번호: 010-****-5678
+   */
+  maskPhone(phone: string): string {
+    if (!phone || phone.length < 10) return phone
+    
+    const cleaned = phone.replace(/[^0-9]/g, '')
+    if (cleaned.length === 11) {
+      return `${cleaned.slice(0, 3)}-****-${cleaned.slice(7)}`
+    } else if (cleaned.length === 10) {
+      if (cleaned.startsWith('02')) {
+        return `${cleaned.slice(0, 2)}-****-${cleaned.slice(6)}`
+      } else {
+        return `${cleaned.slice(0, 3)}-***-${cleaned.slice(6)}`
+      }
+    }
+    return phone
+  }
+
+  /**
+   * 이메일 마스킹
+   * ex) test@example.com -> te**@example.com
    */
   maskEmail(email: string): string {
     if (!email || !email.includes('@')) return email
     
-    const [local, domain] = email.split('@')
-    if (local.length <= 2) return email
-    
-    const masked = local[0] + '***' + (local.length > 4 ? local.slice(-1) : '')
-    return `${masked}@${domain}`
+    const [localPart, domain] = email.split('@')
+    if (localPart.length <= 2) {
+      return `${localPart[0]}*@${domain}`
+    }
+    return `${localPart.slice(0, 2)}${'*'.repeat(localPart.length - 2)}@${domain}`
   }
 
   /**
-   * 주민등록번호 형식 마스킹 (표시용)
-   * 123456-1234567 -> 123456-1******
+   * 이름 마스킹
+   * ex) 홍길동 -> 홍*동
    */
-  maskSSN(ssn: string): string {
-    if (!ssn) return ''
-    const cleaned = ssn.replace(/[^0-9]/g, '')
-    if (cleaned.length !== 13) return ssn
+  maskName(name: string): string {
+    if (!name || name.length < 2) return name
     
-    return cleaned.slice(0, 6) + '-' + cleaned[6] + '******'
+    if (name.length === 2) {
+      return `${name[0]}*`
+    } else if (name.length === 3) {
+      return `${name[0]}*${name[2]}`
+    } else {
+      return `${name[0]}${'*'.repeat(name.length - 2)}${name[name.length - 1]}`
+    }
   }
 
   /**
-   * 신용카드 번호 마스킹 (표시용)
-   * 1234-5678-9012-3456 -> 1234-****-****-3456
+   * 카드번호 마스킹
+   * ex) 1234-5678-9012-3456 -> 1234-****-****-3456
    */
   maskCardNumber(cardNumber: string): string {
-    if (!cardNumber) return ''
     const cleaned = cardNumber.replace(/[^0-9]/g, '')
-    if (cleaned.length < 15) return cardNumber
     
-    const masked = cleaned.slice(0, 4) + '********' + cleaned.slice(-4)
-    return masked.match(/.{1,4}/g)?.join('-') || cardNumber
+    if (cleaned.length !== 16) return cardNumber
+    
+    return `${cleaned.slice(0, 4)}-****-****-${cleaned.slice(12)}`
   }
 
   /**
-   * 주소 부분 마스킹 (상세주소만)
+   * 주소 마스킹 (상세주소만)
+   * ex) 서울시 강남구 테헤란로 123 (상세주소) -> 서울시 강남구 테헤란로 ***
    */
   maskAddress(address: string): string {
-    if (!address) return ''
+    if (!address) return address
     
-    // 상세주소 부분 찾기 (보통 마지막 부분)
-    const parts = address.split(',')
-    if (parts.length > 1) {
-      parts[parts.length - 1] = ' ***'
-      return parts.join(',')
+    // 괄호 안의 내용 제거
+    const withoutParentheses = address.replace(/\([^)]*\)/g, '(***)')
+    
+    // 마지막 상세주소 부분 마스킹
+    const parts = withoutParentheses.split(' ')
+    if (parts.length > 3) {
+      parts[parts.length - 1] = '***'
     }
     
-    // 또는 괄호 안의 내용 마스킹
-    return address.replace(/\([^)]*\)/g, '(***)')
+    return parts.join(' ')
   }
-
+  
   /**
-   * 해시 생성 (비밀번호 등)
+   * 해시 생성 (복호화 불가능한 단방향 암호화)
+   * 비밀번호 등에 사용
    */
   hash(text: string): string {
-    return crypto
-      .createHash('sha256')
-      .update(text + (process.env.HASH_SALT || 'default-salt'))
-      .digest('hex')
+    return crypto.createHash('sha256').update(text).digest('hex')
   }
-
+  
   /**
-   * 안전한 랜덤 토큰 생성
+   * 솔트와 함께 해시 생성
+   */
+  hashWithSalt(text: string, salt?: string): { hash: string; salt: string } {
+    const actualSalt = salt || crypto.randomBytes(16).toString('hex')
+    const hash = crypto.pbkdf2Sync(text, actualSalt, 10000, 64, 'sha512').toString('hex')
+    
+    return { hash, salt: actualSalt }
+  }
+  
+  /**
+   * 솔트 해시 검증
+   */
+  verifyHashWithSalt(text: string, hash: string, salt: string): boolean {
+    const newHash = crypto.pbkdf2Sync(text, salt, 10000, 64, 'sha512').toString('hex')
+    return hash === newHash
+  }
+  
+  /**
+   * 랜덤 토큰 생성
    */
   generateToken(length: number = 32): string {
     return crypto.randomBytes(length).toString('hex')
   }
-
+  
   /**
-   * 안전한 랜덤 숫자 생성 (OTP 등)
+   * 시간 제한 토큰 생성
    */
-  generateOTP(length: number = 6): string {
-    const max = Math.pow(10, length) - 1
-    const min = Math.pow(10, length - 1)
-    const randomNum = crypto.randomInt(min, max + 1)
-    return randomNum.toString()
+  generateTimedToken(expiryMinutes: number = 15): { token: string; expires: Date } {
+    const token = this.generateToken()
+    const expires = new Date(Date.now() + expiryMinutes * 60 * 1000)
+    
+    return { token, expires }
   }
 }
 
 // 싱글톤 인스턴스
 export const encryptionService = new EncryptionService()
-
-// 타입 정의
-export interface EncryptedField {
-  encrypted: string
-  masked: string
-}
-
-/**
- * 민감 정보 처리 헬퍼 함수
- */
-export function processSensitiveData(data: string, type: 'phone' | 'email' | 'address'): EncryptedField {
-  const encrypted = encryptionService.encrypt(data)
-  let masked = ''
-  
-  switch (type) {
-    case 'phone':
-      masked = encryptionService.maskPhone(data)
-      break
-    case 'email':
-      masked = encryptionService.maskEmail(data)
-      break
-    case 'address':
-      masked = encryptionService.maskAddress(data)
-      break
-  }
-  
-  return { encrypted, masked }
-}
-
-/**
- * 복호화 헬퍼 함수
- */
-export function decryptSensitiveData(encryptedData: string): string {
-  try {
-    return encryptionService.decrypt(encryptedData)
-  } catch (error) {
-    console.error('Decryption failed:', error)
-    return ''
-  }
-}

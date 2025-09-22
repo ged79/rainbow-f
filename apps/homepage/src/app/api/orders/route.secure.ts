@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { encryptionService, processSensitiveData } from '@/lib/security/encryption'
+import { encryptionService } from '@/lib/security/encryption'
 import { validatePhone, sanitizeSqlInput, escapeHtml } from '@/lib/security/validation'
 import { createRateLimiter, RATE_LIMITS, ipBlocklist, logSecurityEvent } from '@/lib/security/rate-limit'
 
@@ -192,8 +192,8 @@ export async function POST(request: NextRequest) {
     const orderNumber = generateOrderNumber()
     
     // 민감정보 암호화 (향후 암호화 컬럼 추가 시 사용)
-    const encryptedPhone = processSensitiveData(sanitizedData.customerPhone, 'phone')
-    const encryptedAddress = processSensitiveData(sanitizedData.deliveryAddress, 'address')
+    const encryptedPhone = encryptionService.encrypt(sanitizedData.customerPhone)
+    const encryptedAddress = encryptionService.encrypt(sanitizedData.deliveryAddress)
     
     // 주문 생성
     const { data: order, error: orderError } = await supabase

@@ -715,7 +715,9 @@ export default function CartPageContent() {
                                     className="w-20 h-20 object-cover rounded border border-green-300 cursor-pointer hover:opacity-90"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      window.open(order.completion.photos![0], '_blank')
+                                      if (order.completion?.photos && order.completion.photos[0]) {
+                                        window.open(order.completion.photos[0], '_blank')
+                                      }
                                     }}
                                   />
                                 )}

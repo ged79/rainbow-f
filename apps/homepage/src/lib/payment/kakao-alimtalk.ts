@@ -75,7 +75,7 @@ export class KakaoAlimtalkService {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
       },
-      body: new URLSearchParams(params)
+      body: new URLSearchParams(params as Record<string, string>)
     })
 
     if (!response.ok) {

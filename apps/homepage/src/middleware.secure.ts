@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { ipBlocklist } from './src/lib/security/rate-limit'
+import { ipBlocklist } from '@/lib/security/rate-limit'
 
 // 보호할 경로 목록
 const protectedPaths = ['/api/orders', '/api/auth', '/api/payment']
