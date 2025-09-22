@@ -98,6 +98,8 @@ function OrderDetailContent() {
           points_after: 0
         },
         status: data.status,
+        completion: data.completion,
+        completion_photos: data.completion?.photos || [],
         delivery_date: data.delivery_date,
         delivery_time: data.delivery_time,
         special_instructions: data.special_instructions,

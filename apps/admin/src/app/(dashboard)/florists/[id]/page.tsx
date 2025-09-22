@@ -51,7 +51,7 @@ export default async function FloristDetailPage({ params }: PageProps) {
     .order('created_at', { ascending: false })
     .limit(10)
 
-  const areas = [...new Set(deliveryAreas?.map(d => d.area_name) || [])]
+  const areas = Array.from(new Set(deliveryAreas?.map(d => d.area_name) || []))
 
   return (
     <div>

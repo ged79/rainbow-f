@@ -197,33 +197,7 @@ export default function ProductImageGallery({ images, image, productName, isMobi
         </div>
       )}
 
-      {/* 모바일 줌 컨트롤 */}
-      <div className="lg:hidden flex items-center justify-center gap-3 p-3 bg-neutral-50 rounded-lg">
-        <button 
-          onClick={() => setMobileZoom(Math.max(1, mobileZoom - 0.5))}
-          className="p-2 bg-white rounded-full shadow hover:shadow-md transition-shadow"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <span className="text-sm font-medium px-2">확대/축소</span>
-        <button 
-          onClick={() => setMobileZoom(Math.min(3, mobileZoom + 0.5))}
-          className="p-2 bg-white rounded-full shadow hover:shadow-md transition-shadow"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button 
-          onClick={() => setMobileZoom(1)}
-          className="ml-2 p-2 bg-neutral-900 text-white rounded-full shadow hover:bg-neutral-800 transition-colors"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
-      </div>
 
-      {/* 모바일 핀치 줌 안내 */}
-      <div className="lg:hidden text-center text-xs text-neutral-500 mt-2">
-        두 손가락으로 확대/축소 가능
-      </div>
     </div>
   )
 }

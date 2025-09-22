@@ -50,6 +50,17 @@ export function homepageToUnifiedOrder(order: any): UnifiedOrder {
       special_instructions: order.special_instructions
     },
     
+    products: [
+      {
+        type: order.mapped_category || order.product_category || '기타',
+        name: order.product_name,
+        price: order.mapped_price || order.total_amount,
+        quantity: order.quantity || 1,
+        ribbon_text: Array.isArray(order.ribbon_text) ? order.ribbon_text : [order.ribbon_text].filter(Boolean),
+        special_instructions: order.special_instructions
+      }
+    ],
+    
     pricing: {
       base_price: order.original_price,
       selling_price: order.mapped_price || order.total_amount,
@@ -106,6 +117,12 @@ export function homepageToUnifiedOrder(order: any): UnifiedOrder {
  * Client 주문을 통합 주문 형식으로 변환
  */
 export function clientToUnifiedOrder(order: any): UnifiedOrder {
+  // Debug: Check actual structure
+  if (order.order_number === 'ORD-20250917-1367') {
+    console.log('Debug Client Order:', order);
+    console.log('Recipient:', order.recipient);
+  }
+  
   return {
     id: order.id,
     source: 'client',
@@ -119,6 +136,7 @@ export function clientToUnifiedOrder(order: any): UnifiedOrder {
       phone: ''
     },
     
+    // Client orders from DB already have proper recipient structure
     recipient: order.recipient || {
       name: '',
       phone: '',
@@ -136,6 +154,14 @@ export function clientToUnifiedOrder(order: any): UnifiedOrder {
       name: '',
       price: 0,
       quantity: 1
+    },
+    
+    products: order.product ? [order.product] : [],
+    
+    payment: order.payment || {
+      subtotal: 0,
+      commission: 0,
+      total: 0
     },
     
     pricing: {

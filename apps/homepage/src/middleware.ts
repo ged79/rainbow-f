@@ -1,25 +1,22 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { checkRateLimit } from './lib/rateLimit'
 
-export async function middleware(request: NextRequest) {
-  // Rate limiting for API routes
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
-    const identifier = `api:${ip}`
-    
-    const allowed = await checkRateLimit(identifier)
-    if (!allowed) {
-      return new Response(JSON.stringify({ error: 'Too many requests' }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-  }
-
-  return NextResponse.next()
+export function middleware(request: NextRequest) {
+  const response = NextResponse.next()
+  
+  // 보안 헤더 추가 (이것만 먼저 적용)
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  
+  return response
 }
 
 export const config = {
-  matcher: ['/api/:path*']
+  matcher: [
+    '/api/:path*',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ]
 }

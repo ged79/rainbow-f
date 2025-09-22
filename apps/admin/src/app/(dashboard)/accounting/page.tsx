@@ -76,7 +76,7 @@ export default function RevenueAnalysisPage() {
       .eq('status', 'active')
       .order('business_name')
     
-    if (data) setStores(data)
+    if (data) setStores(data as Store[])
   }
 
   const loadRevenueData = async () => {

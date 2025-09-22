@@ -24,7 +24,6 @@ import {
 
 interface SettlementWithStore extends Settlement {
   store?: Store
-  net_amount?: number
 }
 
 interface FilterState {
@@ -69,7 +68,7 @@ export default function SettlementsPage() {
         .order('business_name')
 
       if (error) throw error
-      setStores(data || [])
+      setStores(data as Store[] || [])
     } catch (error) {
       console.error('Failed to load stores:', error)
     }

@@ -37,6 +37,7 @@ interface Order {
   status: string
   created_at: string
   order_items: OrderItem[]
+  updated_at?: string
   completion?: {
     completed_at: string
     recipient_name: string
@@ -68,10 +69,15 @@ export default function CartPageContent() {
   const [customerPhone, setCustomerPhone] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [rating, setRating] = useState(5)
+  const [reviewText, setReviewText] = useState('')
   
   // 포인트 정보 추가
   const [pointsData, setPointsData] = useState<PointsData | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [expandedReviews, setExpandedReviews] = useState<{[key: string]: boolean}>({})  // 리뷰 펼침 상태
 
   // URL 파라미터 처리
   useEffect(() => {
@@ -182,6 +188,34 @@ export default function CartPageContent() {
     const newWishlist = wishlist.filter(w => (w.id || w.product_id) !== cartItem.id)
     setWishlist(newWishlist)
     localStorage.setItem('wishlist', JSON.stringify(newWishlist))
+  }
+
+  const handleReviewSubmit = async () => {
+    if (!selectedOrder || !rating) return
+    
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: selectedOrder.id,
+          rating,
+          review: reviewText,
+          customer_phone: selectedOrder.customer_phone
+        })
+      })
+      
+      if (res.ok) {
+        alert('리뷰가 등록되었습니다')
+        setShowReviewModal(false)
+        setRating(5)
+        setReviewText('')
+        // 주문 목록 새로고침
+        fetchOrderHistory()
+      }
+    } catch (error) {
+      alert('리뷰 등록 실패')
+    }
   }
 
   const formatPhoneNumber = (value: string) => {
@@ -670,44 +704,89 @@ export default function CartPageContent() {
                         
                         {/* 배송 완료 정보 표시 */}
                         {order.status === 'completed' && order.completion && (
-                          <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-sm font-medium text-green-800">배송 완료</p>
-                              <p className="text-xs text-gray-600">
-                                {(order as any).completed_at ? new Date((order as any).completed_at).toLocaleString() : ''}
-                              </p>
-                            </div>
-                            
-                            {order.completion.recipient_name && (
-                              <p className="text-sm text-gray-700 mb-2">
-                                인수자: <span className="font-medium">{order.completion.recipient_name}</span>
-                              </p>
-                            )}
-                            
-                            {order.completion.photos && order.completion.photos.length > 0 && (
-                              <div>
-                                <p className="text-sm text-gray-600 mb-2">배송 사진</p>
-                                <div className="flex gap-2">
-                                  {order.completion.photos.map((photo, idx) => (
-                                    <img
-                                      key={idx}
-                                      src={photo}
-                                      alt={`배송 사진 ${idx + 1}`}
-                                      className="w-20 h-20 object-cover rounded border border-green-300 cursor-pointer hover:opacity-90"
+                          <>
+                            <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                              <div className="flex gap-3">
+                                {/* 배송 사진 */}
+                                {order.completion.photos && order.completion.photos.length > 0 && (
+                                  <img
+                                    src={order.completion.photos[0]}
+                                    alt="배송 사진"
+                                    className="w-20 h-20 object-cover rounded border border-green-300 cursor-pointer hover:opacity-90"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      window.open(order.completion.photos![0], '_blank')
+                                    }}
+                                  />
+                                )}
+                                
+                                {/* 배송 정보 */}
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-green-800 mb-1">배송 완료</p>
+                                  
+                                  {order.completion.recipient_name && (
+                                    <p className="text-sm text-gray-700">
+                                      인수자: <span className="font-medium">{order.completion.recipient_name}</span>
+                                    </p>
+                                  )}
+                                  
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    배송완료: {order.status === 'completed' && order.updated_at 
+                                      ? (() => {
+                                          const date = new Date(order.updated_at);
+                                          // UTC를 KST로 변환 (+9시간)
+                                          date.setHours(date.getHours() + 9);
+                                          return date.toLocaleString('ko-KR', {
+                                            year: 'numeric',
+                                            month: '2-digit', 
+                                            day: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          });
+                                        })()
+                                      : ''}
+                                  </p>
+                                </div>
+                                
+                                {/* 리뷰 버튼 */}
+                                {!(order as any).review && (
+                                  <div className="flex items-center">
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        window.open(photo, '_blank')
+                                        setSelectedOrder(order)
+                                        setShowReviewModal(true)
                                       }}
-                                    />
-                                  ))}
+                                      className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
+                                    >
+                                      리뷰 작성
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* 리뷰 내용 표시 */}
+                            {(order as any).review && (order as any).review.review && (
+                              <div className="mt-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="flex gap-0.5">
+                                    {[...Array(5)].map((_, i) => (
+                                      <span key={i} className={`text-xs ${i < (order as any).review.rating ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                        ★
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date((order as any).review.created_at).toLocaleDateString('ko-KR')}
+                                  </span>
                                 </div>
+                                <p className="text-sm text-gray-700">
+                                  {(order as any).review.review}
+                                </p>
                               </div>
                             )}
-                            
-                            {order.completion.note && (
-                              <p className="text-sm text-gray-600 mt-2">배송 메모: {order.completion.note}</p>
-                            )}
-                          </div>
+                          </>
                         )}
                       </div>
                     ))}
@@ -718,6 +797,82 @@ export default function CartPageContent() {
           </div>
         </div>
       </div>
+      
+      {/* 리뷰 모달 */}
+      {showReviewModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">리뷰 작성</h3>
+            
+            {/* 상품 정보 */}
+            <div className="flex gap-3 mb-4 pb-4 border-b">
+              {selectedOrder.order_items[0] && (
+                <>
+                  <img
+                    src={selectedOrder.order_items[0].product_image}
+                    alt={selectedOrder.order_items[0].product_name}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                  <div>
+                    <p className="font-medium">{selectedOrder.order_items[0].product_name}</p>
+                    <p className="text-sm text-gray-500">주문번호: {selectedOrder.order_number.split('-').pop()}</p>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* 별점 */}
+            <div className="mb-4">
+              <p className="text-sm font-medium mb-2">만족도</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(star)}
+                    className="text-3xl transition-colors"
+                  >
+                    <span className={star <= rating ? 'text-yellow-400' : 'text-gray-300'}>
+                      ★
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* 리뷰 텍스트 */}
+            <div className="mb-4">
+              <p className="text-sm font-medium mb-2">리뷰 내용 (선택)</p>
+              <textarea
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                rows={4}
+                placeholder="상품에 대한 소감을 남겨주세요"
+              />
+            </div>
+            
+            {/* 버튼 */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowReviewModal(false)
+                  setRating(5)
+                  setReviewText('')
+                }}
+                className="flex-1 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleReviewSubmit}
+                className="flex-1 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors font-medium"
+              >
+                리뷰 등록
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

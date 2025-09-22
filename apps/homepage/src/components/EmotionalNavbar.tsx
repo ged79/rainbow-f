@@ -171,7 +171,20 @@ export default function EmotionalNavbar({ showCategories = false, fixed = false,
             </div>
 
             {/* Right Icons */}
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1 md:gap-2">
+              {/* Order Lookup Button */}
+              <Link 
+                href="/shopping-cart" 
+                className={`hidden md:inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium border rounded-lg transition-all
+                  ${
+                    isMainPage && !scrolled && !fixed
+                      ? 'border-white/50 text-white hover:bg-white/10'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+              >
+                주문조회
+              </Link>
+
               {/* Mobile Search */}
               <button 
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -249,14 +262,17 @@ export default function EmotionalNavbar({ showCategories = false, fixed = false,
                 )}
               </div>
 
-              {/* Cart */}
-              <Link href="/shopping-cart" className={`relative p-2 rounded-full transition-all hover:bg-gray-100`}>
-                <ShoppingBag className={`w-5 h-5 ${iconColor} hover:text-rose-500 transition-colors`} strokeWidth={1.5} />
-                {(cartCount + wishlistCount) > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-medium">
-                    {(cartCount + wishlistCount) > 99 ? '99+' : (cartCount + wishlistCount)}
-                  </span>
-                )}
+              {/* Mobile Order Lookup */}
+              <Link 
+                href="/shopping-cart" 
+                className={`md:hidden inline-flex items-center justify-center px-2 py-1 text-xs font-medium border rounded transition-all
+                  ${
+                    isMainPage && !scrolled && !fixed
+                      ? 'border-white/50 text-white hover:bg-white/10'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+              >
+                주문조회
               </Link>
             </div>
           </div>

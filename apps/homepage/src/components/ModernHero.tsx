@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Sparkles, Heart, Flower, Gift } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sparkles, Heart, Flower, Gift, Coins } from 'lucide-react'
 import Button from '../components/ui/Button'
 
 const categories = [
@@ -56,21 +56,21 @@ const categories = [
 const heroSlides = [
   { 
     image: '/믹스부케.jpg', 
-    title: '마음을 전하는',
-    subtitle: '특별한 순간',
-    description: '당신의 진심을 꽃으로 전달합니다'
+    title: '전국 3시간 당일배송',
+    subtitle: '',
+    description: ''
   },
   { 
     image: '/코스모스.jpg', 
-    title: '사랑과 감사를',
-    subtitle: '꽃으로 표현하세요',
-    description: '최고의 품질로 마음을 전합니다'
+    title: '구매금액 최대 5% 포인트 적립',
+    subtitle: '',
+    description: ''
   },
   { 
     image: '/프리미엄 꽃다발.jpg', 
-    title: '인생의 모든',
-    subtitle: '아름다운 순간에',
-    description: '특별한 날을 더욱 특별하게'
+    title: '추천인도 3% 포인트 적립',
+    subtitle: '',
+    description: ''
   }
 ]
 
@@ -106,7 +106,7 @@ export default function ModernHero() {
   if (!mounted) {
     return (
       <section className="relative overflow-hidden bg-white">
-        <div className="relative w-full h-[85vh] min-h-[550px]">
+        <div className="relative w-full h-[76.5vh] min-h-[500px]">
           <Image 
             src="/데이지.jpg"
             alt="Loading"
@@ -121,6 +121,14 @@ export default function ModernHero() {
               <p className="text-white/80">로딩 중...</p>
             </div>
           </div>
+
+          {/* 포인트 혜택 버튼 - PC 오른쪽 하단 */}
+          <Link 
+            href="/points-guide" 
+            className="fixed bottom-10 right-10 z-50 bg-rose-500 hover:bg-rose-600 transition-all duration-300 rounded-full w-16 h-16 flex items-center justify-center shadow-xl hover:shadow-2xl group"
+          >
+            <span className="text-white text-2xl font-bold">P</span>
+          </Link>
         </div>
       </section>
     )
@@ -161,12 +169,26 @@ export default function ModernHero() {
             <div className="max-w-7xl mx-auto px-8 w-full">
               <div className="max-w-2xl">
                 <h1 className="text-4xl lg:text-5xl text-white mb-4 tracking-tight">
-                <span className="font-light leading-tight">{heroSlides[currentSlide].title}</span><br/>
-                <span className="font-bold">{heroSlides[currentSlide].subtitle}</span>
-                </h1>
+                {currentSlide === 1 ? (
+                  <Link href="/points-guide" className="hover:underline underline-offset-4 decoration-2">
+                    <span className="font-light leading-tight underline">{heroSlides[currentSlide].title}</span>
+                  </Link>
+                ) : currentSlide === 2 ? (
+                  <Link href="/points-guide" className="hover:underline underline-offset-4 decoration-2">
+                    <span className="font-light leading-tight underline">{heroSlides[currentSlide].title}</span>
+                  </Link>
+                ) : (
+                  <span className="font-light leading-tight">{heroSlides[currentSlide].title}</span>
+                )}
+                {heroSlides[currentSlide].subtitle && (
+                  <><br/><span className="font-bold">{heroSlides[currentSlide].subtitle}</span></>
+                )}
+              </h1>
+              {heroSlides[currentSlide].description && (
                 <p className="text-lg text-white/90 mb-8 font-light">
-                {heroSlides[currentSlide].description}
+                  {heroSlides[currentSlide].description}
                 </p>
+              )}
               </div>
             </div>
           </div>
@@ -226,6 +248,14 @@ export default function ModernHero() {
             </div>
           </div>
         </div>
+
+        {/* 포인트 혜택 버튼 - 모바일 오른쪽 하단 */}
+        <Link 
+          href="/points-guide" 
+          className="fixed bottom-6 right-6 z-50 bg-rose-500 hover:bg-rose-600 transition-all duration-300 rounded-full w-14 h-14 flex items-center justify-center shadow-xl"
+        >
+          <span className="text-white text-xl font-bold">P</span>
+        </Link>
       </section>
     )
   }
@@ -234,7 +264,7 @@ export default function ModernHero() {
   return (
     <section className="relative overflow-hidden bg-white">
       {/* 히어로 이미지 - 확대 */}
-      <div className="relative w-full h-[85vh] min-h-[550px]">
+      <div className="relative w-full h-[76.5vh] min-h-[500px]">
         {heroSlides.map((slide, index) => (
           <div
             key={index}
@@ -247,22 +277,44 @@ export default function ModernHero() {
               alt={slide.title}
               className="w-full h-full object-cover"
             />
-            {index === 0 && (
-              <div className="absolute inset-0 bg-black/20"></div>
+            {/* 믹스부케 이미지만 살짝 오버레이 */}
+            {slide.image.includes('믹스부케') && (
+              <div className="absolute inset-0 bg-black/10"></div>
             )}
           </div>
         ))}
         
-        <div className="absolute inset-0 flex items-end pb-12">
-          <div className="px-4 w-full">
-            <h1 className="text-2xl text-white mb-2 font-light">
-              {heroSlides[currentSlide].title}<br/>
-              <span className="font-bold">{heroSlides[currentSlide].subtitle}</span>
-            </h1>
-            <p className="text-white/90 mb-3 text-sm">
-              {heroSlides[currentSlide].description}
-            </p>
+        <div className="absolute bottom-8 left-6">
+          <div className="max-w-[85%]">
+            {/* 텍스트 컨테이너 */}
+            <div className="relative">
+              <h1 className="text-xl text-white mb-2 font-medium drop-shadow-2xl">
+                {currentSlide === 1 || currentSlide === 2 ? (
+                  <Link href="/points-guide" className="underline underline-offset-2 decoration-1">
+                    {heroSlides[currentSlide].title}
+                  </Link>
+                ) : (
+                  heroSlides[currentSlide].title
+                )}
+                {heroSlides[currentSlide].subtitle && (
+                  <><br/><span className="font-bold drop-shadow-2xl">{heroSlides[currentSlide].subtitle}</span></>
+                )}
+              </h1>
+              {heroSlides[currentSlide].description && (
+                <p className="text-white text-xs font-medium drop-shadow-xl">
+                  {heroSlides[currentSlide].description}
+                </p>
+              )}
+            </div>
           </div>
+
+          {/* 포인트 혜택 버튼 - PC 오른쪽 하단 */}
+          <Link 
+            href="/points-guide" 
+            className="fixed bottom-10 right-10 z-50 bg-rose-500 hover:bg-rose-600 transition-all duration-300 rounded-full w-16 h-16 flex items-center justify-center shadow-xl hover:shadow-2xl group"
+          >
+            <span className="text-white text-2xl font-bold">P</span>
+          </Link>
         </div>
 
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
@@ -281,8 +333,8 @@ export default function ModernHero() {
       </div>
 
       {/* 카테고리 섹션 - 한줄 배치 */}
-      <div className="px-4 py-3 bg-white">
-        <h3 className="text-center text-sm font-medium text-neutral-900 mb-2">
+      <div className="px-4 py-6 bg-white">
+        <h3 className="text-center text-base font-medium text-neutral-900 mb-4">
           어떤 마음을 전하고 싶으신가요?
         </h3>
         

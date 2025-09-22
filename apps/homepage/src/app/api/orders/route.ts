@@ -76,9 +76,22 @@ export async function GET(request: NextRequest) {
       }]
     }))
 
+    // 각 주문에 대한 리뷰 조회
+    const ordersWithReviews = await Promise.all(
+      ordersWithItems.map(async (order) => {
+        const { data: review } = await supabase
+          .from('order_reviews')
+          .select('*')
+          .eq('order_id', order.id)
+          .single()
+        
+        return { ...order, review }
+      })
+    )
+
     return NextResponse.json({ 
       success: true,
-      orders: ordersWithItems,
+      orders: ordersWithReviews,
       points: {
         total: totalPoints,
         available: totalPoints,

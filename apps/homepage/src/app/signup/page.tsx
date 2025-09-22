@@ -345,9 +345,9 @@ function SignupForm() {
                 🎁 회원가입 혜택
               </p>
               <ul className="text-xs text-gray-600 space-y-1">
-                <li>• 신규가입 5,000원 쿠폰 즉시 지급</li>
-                <li>• 구매금액의 3% 포인트 적립</li>
-                <li>• 친구 추천 시 추가 포인트</li>
+                <li>• 신규가입 4,900포인트 즉시 지급</li>
+                <li>• 구매금액의 3~5% 포인트 적립</li>
+                <li>• 추천번호 입력 시 2% 추가 적립</li>
                 {existingPoints > 0 && (
                   <li className="text-orange-600 font-semibold">
                     • 기존 포인트 {existingPoints.toLocaleString()}원 자동 연결!

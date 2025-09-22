@@ -13,6 +13,7 @@ import {
   checkDeliveryStatus
 } from '@flower/shared/utils'
 import { UnifiedOrder } from '@flower/shared/types'
+import AdminDeliveryCompleteModal from '@/components/AdminDeliveryCompleteModal'
 import toast from 'react-hot-toast'
 import { 
   Clock, 
@@ -27,7 +28,8 @@ import {
   MapPin,
   User,
   Phone,
-  Building
+  Building,
+  Camera
 } from 'lucide-react'
 
 export default function UnifiedOrdersPage() {
@@ -42,9 +44,10 @@ export default function UnifiedOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   
-  // Modal
+  // Modals
   const [selectedOrder, setSelectedOrder] = useState<UnifiedOrder | null>(null)
   const [selectedStore, setSelectedStore] = useState('')
+  const [deliveryCompleteOrder, setDeliveryCompleteOrder] = useState<UnifiedOrder | null>(null)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,7 +89,7 @@ export default function UnifiedOrdersPage() {
         sender_store:stores!sender_store_id(*),
         receiver_store:stores!receiver_store_id(*)
       `)
-      .not('receiver_store_id', 'is', null)  // 배정된 주문만
+      .not('receiver_store_id', 'is', null)
       .neq('status', 'completed')
       .neq('status', 'cancelled')
       .order('created_at', { ascending: false })
@@ -98,9 +101,9 @@ export default function UnifiedOrdersPage() {
     const { data } = await supabase
       .from('customer_orders')
       .select('*')
-      .not('assigned_store_id', 'is', null)  // 배정된 주문만
+      .not('assigned_store_id', 'is', null)
       .neq('status', 'completed')
-      .is('linked_order_id', null)  // orders 테이블에 복사되지 않은 것만
+      .is('linked_order_id', null)
       .order('created_at', { ascending: false })
     
     return data || []
@@ -407,14 +410,25 @@ export default function UnifiedOrdersPage() {
                   </td>
 
                   <td className="px-3 py-3">
-                    {order.status === 'pending' && !order.stores.receiver && (
-                      <button
-                        className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-                        onClick={() => setSelectedOrder(order)}
-                      >
-                        배정
-                      </button>
-                    )}
+                    <div className="flex gap-2">
+                      {order.status === 'pending' && !order.stores.receiver && (
+                        <button
+                          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                          onClick={() => setSelectedOrder(order)}
+                        >
+                          배정
+                        </button>
+                      )}
+                      {(order.status === 'accepted' || order.status === 'assigned' || order.status === 'preparing' || order.status === 'delivering') && (
+                        <button
+                          className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 flex items-center gap-1"
+                          onClick={() => setDeliveryCompleteOrder(order)}
+                        >
+                          <Camera className="w-3 h-3" />
+                          배송완료
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )
@@ -478,6 +492,21 @@ export default function UnifiedOrdersPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delivery Complete Modal */}
+      {deliveryCompleteOrder && (
+        <AdminDeliveryCompleteModal
+          isOpen={true}
+          onClose={() => setDeliveryCompleteOrder(null)}
+          orderId={deliveryCompleteOrder.id}
+          orderNumber={deliveryCompleteOrder.order_number}
+          source={deliveryCompleteOrder.source}
+          onComplete={() => {
+            setDeliveryCompleteOrder(null)
+            loadData()
+          }}
+        />
       )}
     </div>
   )

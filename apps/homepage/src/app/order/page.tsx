@@ -81,6 +81,7 @@ const OrderPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [recommendedProducts, setRecommendedProducts] = useState<HomepageProduct[]>([])
+  const [productReviews, setProductReviews] = useState<any[]>([])  // 상품 리뷰
   const searchParams = useSearchParams()
   
   // 상품명에서 상품 타입 추출
@@ -121,6 +122,19 @@ const OrderPage = () => {
     // 주문자 전화번호 입력 시 포인트 조회
     if (field === 'customer_phone' && formatted.length === 13) { // 010-1234-5678 형식
       fetchAvailablePoints(formatted)
+    }
+  }
+  
+  // 상품 리뷰 가져오기
+  const fetchProductReviews = async (productName: string) => {
+    try {
+      const res = await fetch(`/api/products/reviews?name=${encodeURIComponent(productName)}`)
+      if (res.ok) {
+        const { reviews } = await res.json()
+        setProductReviews(reviews || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch reviews:', error)
     }
   }
 
@@ -292,6 +306,9 @@ const OrderPage = () => {
             special_instructions: orderProduct.message || ''
           }))
           
+          // 상품 리뷰 가져오기
+          fetchProductReviews(orderProduct.name)
+          
           // directOrder 데이터 사용 후 삭제
           localStorage.removeItem('directOrder')
           setIsLoading(false)
@@ -334,6 +351,9 @@ const OrderPage = () => {
               product_price: foundProduct.price,
               product_type: getProductType(foundProduct.name)
             }))
+            
+            // 상품 리뷰 가져오기
+            fetchProductReviews(foundProduct.name)
           } else {
             console.error('Product not found:', productId)
           }
@@ -413,6 +433,17 @@ const OrderPage = () => {
     if (!detailAddress || detailAddress.trim() === '') {
       alert('상세주소를 입력해주세요. (예: 101동 202호, 2층, ○○아파트 등)')
       return
+    }
+    
+    // 즉시배송 선택 시 현재 날짜/시간 자동 설정
+    if (orderData.delivery_time === '즉시배송') {
+      const now = new Date()
+      // 한국 시간으로 변환
+      const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}))
+      orderData.delivery_date = koreaTime.toISOString().split('T')[0]
+      const hours = koreaTime.getHours().toString().padStart(2, '0')
+      const minutes = koreaTime.getMinutes().toString().padStart(2, '0')
+      orderData.delivery_time = `${hours}:${minutes}`
     }
     
     if (!orderData.delivery_date) {
@@ -573,18 +604,17 @@ const OrderPage = () => {
                   </p>
                 </div>
 
-                {/* 꽃말 및 배송 정보 */}
-                <div className="bg-amber-50 p-4 rounded-lg mb-6">
-                  <div className="text-amber-700 font-medium mb-2">
-                    꽃말: {product.flowerMessage || '사랑'}
+                {/* 상품 설명 */}
+                {product.description && (
+                  <div className="bg-amber-50 p-4 rounded-lg mb-6">
+                    <div className="text-amber-700 font-medium mb-2">
+                      상품 설명
+                    </div>
+                    <div className="text-amber-600 text-sm">
+                      {product.description}
+                    </div>
                   </div>
-                  <div className="text-amber-600 italic mb-3 text-sm">
-                    {product.flowerMeaning || "사랑에 빠진 자는 세상에서 가장 아름다운 꽃이 된다"}
-                  </div>
-                  <div className="flex items-center text-green-600 font-medium">
-                    <span>🚚 배송 {product.deliveryCount || 89}건 완료</span>
-                  </div>
-                </div>
+                )}
 
 {/* 수량 선택 */}
                 <div className="flex items-center justify-between py-4 mb-4">
@@ -643,6 +673,36 @@ const OrderPage = () => {
               </div>
             </div>
           </div>
+
+          {/* 리뷰 섹션 */}
+          {productReviews.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm mt-6">
+              <div className="p-6">
+                <h3 className="text-xl font-semibold mb-4">구매 리뷰 ({productReviews.length})</h3>
+                <div className="space-y-4">
+                  {productReviews.map((review: any, idx: number) => (
+                    <div key={idx} className="border-b pb-4 last:border-b-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <span key={i} className={`text-lg ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}>
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {new Date(review.created_at).toLocaleDateString('ko-KR')}
+                        </span>
+                      </div>
+                      {review.review && (
+                        <p className="text-gray-700">{review.review}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* 추천 상품 섹션 */}
@@ -689,19 +749,18 @@ const OrderPage = () => {
             <div className="text-2xl font-bold text-green-600 mb-3">
               {product.price.toLocaleString()}원
             </div>
-            <div className="flex items-center bg-green-50 rounded-lg p-2 mb-2">
-              <span className="text-sm font-medium text-green-600">🚚 배송 {product.deliveryCount || 89}건 완료</span>
-            </div>
             
-            {/* Flower Quote */}
-            <div className="bg-amber-50 rounded-lg p-2 mb-2">
-              <div className="text-amber-700 text-xs font-medium mb-1">
-                꽃말: {product.flowerMessage || '사랑'}
+            {/* 상품 설명 */}
+            {product.description && (
+              <div className="bg-amber-50 rounded-lg p-2 mb-2">
+                <div className="text-amber-700 text-xs font-medium mb-1">
+                  상품 설명
+                </div>
+                <div className="text-xs text-amber-600">
+                  {product.description}
+                </div>
               </div>
-              <div className="text-xs italic text-amber-600">
-                {product.flowerMeaning || "사랑에 빠진 자는 세상에서 가장 아름다운 꽃이 된다"}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -726,6 +785,10 @@ const OrderPage = () => {
                 <tr>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">회원</td>
                   <td className="px-4 py-3 text-sm text-gray-600">5% 적립</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">추천인</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">3% 추가 적립</td>
                 </tr>
               </tbody>
             </table>
@@ -755,6 +818,34 @@ const OrderPage = () => {
             </div>
           </div>
         </div>
+        
+        {/* 리뷰 섹션 - 모바일 */}
+        {productReviews.length > 0 && (
+          <div className="bg-white shadow-sm p-6">
+            <h3 className="text-lg font-semibold mb-4">구매 리뷰 ({productReviews.length})</h3>
+            <div className="space-y-3">
+              {productReviews.slice(0, 5).map((review: any, idx: number) => (
+                <div key={idx} className="border-b pb-3 last:border-b-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i} className={`text-sm ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}>
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(review.created_at).toLocaleDateString('ko-KR')}
+                    </span>
+                  </div>
+                  {review.review && (
+                    <p className="text-sm text-gray-700">{review.review}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fixed Bottom Order Bar - 모바일에만 표시 */}
@@ -918,7 +1009,7 @@ const OrderPage = () => {
                   </div>
                   <div className="p-2 bg-gray-50 rounded">
                     <p className="text-xs text-gray-500">리본문구</p>
-                    <p className="text-sm font-medium truncate">{orderData.ribbon_text?.[0] || '선택 안함'}</p>
+                    <p className="text-sm font-medium truncate">{orderData.ribbon_text || '선택 안함'}</p>
                   </div>
                 </div>
               </div>

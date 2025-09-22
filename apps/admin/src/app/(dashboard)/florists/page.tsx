@@ -116,8 +116,9 @@ export default function FloristsPage() {
       if (region) {
         filtered = filtered.filter(store => {
           // address로 확인
-          if (typeof store.address === 'string') {
-            return store.address.includes(region.short) || store.address.includes(region.long)
+          const addr = store.address;
+          if (typeof addr === 'string') {
+            return addr.includes(region.short) || addr.includes(region.long)
           }
           if (store.address && typeof store.address === 'object') {
             if (store.address.sido === region.short) return true
@@ -202,8 +203,9 @@ export default function FloristsPage() {
           const regionCount = region.code === 'all' 
             ? stores.length 
             : stores.filter(s => {
-                if (typeof s.address === 'string') {
-                  return s.address.includes(region.short) || s.address.includes(region.long)
+                const addr = s.address;
+                if (typeof addr === 'string') {
+                  return addr.includes(region.short) || addr.includes(region.long)
                 }
                 if (s.address && typeof s.address === 'object') {
                   return s.address.sido === region.short

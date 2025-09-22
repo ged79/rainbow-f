@@ -18,7 +18,11 @@ import {
   Search,
   Calendar,
   User,
-  Phone
+  Phone,
+  Camera,
+  Clock,
+  AlertCircle,
+  Eye
 } from 'lucide-react'
 
 export default function CompletedOrdersPage() {
@@ -28,7 +32,6 @@ export default function CompletedOrdersPage() {
   const [isLoading, setIsLoading] = useState(true)
   
   const [searchQuery, setSearchQuery] = useState('')
-  const [dateFilter, setDateFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
 
   const supabase = createBrowserClient(
@@ -42,11 +45,10 @@ export default function CompletedOrdersPage() {
 
   useEffect(() => {
     applyFilters()
-  }, [orders, searchQuery, dateFilter, sourceFilter])
+  }, [orders, searchQuery, sourceFilter])
 
   const loadCompletedOrders = async () => {
     try {
-      // Client 완료 주문 (화원이 최종 배송완료한 것)
       const { data: clientOrders } = await supabase
         .from('orders')
         .select(`
@@ -57,16 +59,17 @@ export default function CompletedOrdersPage() {
         .eq('status', 'completed')
         .order('updated_at', { ascending: false })
 
-      // Homepage 완료 주문은 제외 (Client로 이전되어 중복)
-      // const { data: homepageOrders } = await supabase
-      //   .from('customer_orders')
-      //   .select('*')
-      //   .eq('status', 'completed')
-      //   .order('completed_at', { ascending: false })
+      const { data: homepageOrders } = await supabase
+        .from('customer_orders')
+        .select('*')
+        .eq('status', 'completed')
+        .is('linked_order_id', null)
+        .order('updated_at', { ascending: false })
 
       const unified = [
-        ...(clientOrders || []).map(clientToUnifiedOrder)
-      ].sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
+        ...(clientOrders || []).map(clientToUnifiedOrder),
+        ...(homepageOrders || []).map(homepageToUnifiedOrder)
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       setOrders(unified)
     } finally {
@@ -80,28 +83,14 @@ export default function CompletedOrdersPage() {
     if (sourceFilter !== 'all') {
       filtered = filtered.filter(o => o.source === sourceFilter)
     }
-    
-    if (dateFilter !== 'all') {
-      const now = new Date()
-      const today = new Date(now.setHours(0, 0, 0, 0))
-      const week = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const month = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
-      
-      filtered = filtered.filter(o => {
-        const orderDate = new Date(o.updated_at || o.created_at)
-        if (dateFilter === 'today') return orderDate >= today
-        if (dateFilter === 'week') return orderDate >= week
-        if (dateFilter === 'month') return orderDate >= month
-        return true
-      })
-    }
-    
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(o => 
         o.order_number.toLowerCase().includes(query) ||
         o.customer.name.toLowerCase().includes(query) ||
-        o.recipient.name.toLowerCase().includes(query)
+        o.recipient.name.toLowerCase().includes(query) ||
+        o.recipient.phone.includes(query)
       )
     }
     
@@ -110,9 +99,13 @@ export default function CompletedOrdersPage() {
 
   const stats = {
     total: filteredOrders.length,
+    today: filteredOrders.filter(o => {
+      const completed = new Date(o.completion?.completed_at || o.updated_at)
+      const today = new Date()
+      return completed.toDateString() === today.toDateString()
+    }).length,
     client: filteredOrders.filter(o => o.source === 'client').length,
-    homepage: filteredOrders.filter(o => o.source === 'homepage').length,
-    revenue: filteredOrders.reduce((sum, o) => sum + o.pricing.commission, 0)
+    homepage: filteredOrders.filter(o => o.source === 'homepage').length
   }
 
   if (isLoading) {
@@ -120,171 +113,181 @@ export default function CompletedOrdersPage() {
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4">완료 주문 내역</h1>
+    <div className="p-4 lg:p-6">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-xl lg:text-2xl font-bold mb-3">배송완료 주문 내역</h1>
         
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          <div className="bg-white p-3 rounded shadow">
-            <p className="text-sm text-gray-600">전체 완료</p>
-            <p className="text-2xl font-bold">{stats.total}</p>
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="bg-white p-2 rounded border text-center">
+            <p className="text-xs text-gray-600">전체</p>
+            <p className="text-lg font-bold">{stats.total}</p>
           </div>
-          <div className="bg-white p-3 rounded shadow">
-            <p className="text-sm text-gray-600">Client</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.client}</p>
+          <div className="bg-white p-2 rounded border text-center">
+            <p className="text-xs text-gray-600">오늘</p>
+            <p className="text-lg font-bold text-green-600">{stats.today}</p>
           </div>
-          <div className="bg-white p-3 rounded shadow">
-            <p className="text-sm text-gray-600">Homepage</p>
-            <p className="text-2xl font-bold text-green-600">{stats.homepage}</p>
+          <div className="bg-white p-2 rounded border text-center">
+            <p className="text-xs text-gray-600">Client</p>
+            <p className="text-lg font-bold text-blue-600">{stats.client}</p>
           </div>
-          <div className="bg-white p-3 rounded shadow">
-            <p className="text-sm text-gray-600">총 수수료</p>
-            <p className="text-xl font-bold">{formatCurrency(stats.revenue)}</p>
+          <div className="bg-white p-2 rounded border text-center">
+            <p className="text-xs text-gray-600">Homepage</p>
+            <p className="text-lg font-bold text-green-600">{stats.homepage}</p>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white p-4 rounded shadow mb-4">
-        <div className="flex gap-3">
-          <Search className="h-5 w-5 text-gray-500 mt-2" />
+        {/* Filters */}
+        <div className="flex gap-2">
           <input
-            className="flex-1 px-3 py-2 border rounded"
+            className="flex-1 px-3 py-2 border rounded text-sm"
             placeholder="검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <select 
-            className="px-3 py-2 border rounded"
+            className="px-3 py-2 border rounded text-sm"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
           >
-            <option value="all">전체 출처</option>
+            <option value="all">전체</option>
             <option value="client">Client</option>
             <option value="homepage">Homepage</option>
-          </select>
-          <select 
-            className="px-3 py-2 border rounded"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          >
-            <option value="all">전체 기간</option>
-            <option value="today">오늘</option>
-            <option value="week">1주일</option>
-            <option value="month">1개월</option>
           </select>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
+      {/* Mobile View - Cards */}
+      <div className="lg:hidden">
+        <div className="space-y-2">
+          {filteredOrders.map((order) => (
+            <div key={order.id} className="bg-white border rounded-lg p-3">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <span className={`inline-block px-1.5 py-0.5 text-xs rounded mr-2 ${
+                    order.source === 'homepage' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {order.source === 'homepage' ? 'HP' : 'CL'}
+                  </span>
+                  <span className="text-sm font-medium">{order.order_number}</span>
+                </div>
+                <span className="text-sm font-bold">{formatCurrency(order.payment?.total || 0)}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-gray-600">주문일:</span> {formatDate(order.created_at)}
+                </div>
+                <div>
+                  <span className="text-gray-600">완료일:</span> {formatDate(order.completion?.completed_at || order.updated_at)}
+                </div>
+                <div>
+                  <span className="text-gray-600">주문자:</span> {order.customer?.name || '-'}
+                </div>
+                <div>
+                  <span className="text-gray-600">받는분:</span> {order.recipient?.name || '-'}
+                </div>
+                <div>
+                  <span className="text-gray-600">연락처:</span> {formatPhone(order.recipient.phone)}
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-600">상품:</span> {order.products?.[0]?.name || order.product?.name || '상품정보 없음'}
+                  {order.products?.length > 1 && ` 외 ${order.products.length - 1}건`}
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-600">배송지:</span> 
+                  <div>{order.recipient?.address?.sigungu || ''} {order.recipient?.address?.dong || ''}</div>
+                  {order.recipient?.address?.detail && (
+                    <div className="text-gray-500 text-xs">{order.recipient.address.detail}</div>
+                  )}
+                </div>
+              </div>
+
+              <Link href={`/orders/${order.id}?source=${order.source}`} className="mt-2 block">
+                <button className="w-full py-1.5 bg-gray-100 text-xs rounded hover:bg-gray-200">
+                  상세보기
+                </button>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop View - Table */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="w-full bg-white border rounded-lg">
+          <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">주문정보</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">완료일시</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">발주/수주</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">고객/수령인</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">배송지</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상품</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">금액</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">출처</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">주문번호</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">주문일시</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">완료일시</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">발송화원</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">받는분</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">연락처</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">배송지</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">상품</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">금액</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-700">액션</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {filteredOrders.map((order) => (
-              <tr key={`${order.source}-${order.id}`}>
-                <td className="px-3 py-3">
-                  <div>
-                    <p className="text-sm font-medium">{order.order_number}</p>
-                    <span className={`text-xs px-1 py-0.5 rounded ${
-                      order.source === 'homepage' 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {order.source === 'homepage' ? 'HP' : 'CL'}
-                    </span>
-                  </div>
+              <tr key={order.id} className="hover:bg-gray-50">
+                <td className="px-3 py-2">
+                  <span className={`inline-block px-1.5 py-0.5 text-xs rounded ${
+                    order.source === 'homepage' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {order.source === 'homepage' ? 'HP' : 'CL'}
+                  </span>
                 </td>
-
-                <td className="px-3 py-3">
-                  <p className="text-sm">
-                    {formatDate(order.tracking?.completed_at || order.updated_at || order.created_at)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(order.tracking?.completed_at || order.updated_at || order.created_at)
-                      .toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                <td className="px-3 py-2 text-xs font-medium">{order.order_number}</td>
+                <td className="px-3 py-2 text-xs">{formatDate(order.created_at)}</td>
+                <td className="px-3 py-2 text-xs">
+                  {formatDate(order.completion?.completed_at || order.updated_at)}
                 </td>
-
-                <td className="px-3 py-3">
-                  <Link href={order.stores.sender?.id ? `/florists/${order.stores.sender.id}` : '#'}>
-                    <p className="text-sm font-medium hover:text-blue-600 cursor-pointer">
-                      {order.stores.sender?.business_name || '홈페이지'}
-                    </p>
-                  </Link>
-                  {order.stores.receiver && (
-                    <Link href={`/florists/${order.stores.receiver.id || order.stores.receiver}`}>
-                      <p className="text-xs text-green-600 hover:text-green-700 cursor-pointer">
-                        → {order.stores.receiver.business_name || order.stores.receiver.name}
-                      </p>
-                    </Link>
+                <td className="px-3 py-2 text-xs">
+                  {order.sender?.store_name || order.customer?.name || '-'}
+                </td>
+                <td className="px-3 py-2 text-xs font-medium">{order.recipient?.name || '-'}</td>
+                <td className="px-3 py-2 text-xs">{formatPhone(order.recipient?.phone || '')}</td>
+                <td className="px-3 py-2 text-xs">
+                  {order.recipient?.address?.sigungu || ''} {order.recipient?.address?.dong || ''}
+                  {order.recipient?.address?.detail && (
+                    <div className="text-gray-500">{order.recipient.address.detail}</div>
                   )}
                 </td>
-
-                <td className="px-3 py-3">
-                  <p className="text-sm">{order.customer.name}</p>
-                  <p className="text-xs text-gray-500">{formatPhone(order.customer.phone)}</p>
-                  <p className="text-xs text-gray-400">→ {order.recipient.name}</p>
-                  <p className="text-xs text-gray-500">{formatPhone(order.recipient.phone)}</p>
+                <td className="px-3 py-2 text-xs">
+                  {order.products?.[0]?.name || order.product?.name || '-'}
+                  {order.products?.length > 1 && ` 외 ${order.products.length - 1}`}
                 </td>
-
-                <td className="px-3 py-3">
-                  <div className="text-xs">
-                    {typeof order.recipient.address === 'string' ? (
-                      <p className="font-medium">{order.recipient.address}</p>
-                    ) : (
-                      <>
-                        <p className="font-medium">
-                          {order.recipient.address?.sido} {order.recipient.address?.sigungu}
-                        </p>
-                        {order.recipient.address?.dong && (
-                          <p className="text-gray-600">{order.recipient.address.dong}</p>
-                        )}
-                        {order.recipient.address?.detail && (
-                          <p className="text-gray-500">{order.recipient.address.detail}</p>
-                        )}
-                      </>
-                    )}
-                  </div>
+                <td className="px-3 py-2 text-xs font-bold text-right">
+                  {formatCurrency(order.payment?.total || 0)}
                 </td>
-
-                <td className="px-3 py-3">
+                <td className="px-3 py-2 text-center">
                   <Link href={`/orders/${order.id}?source=${order.source}`}>
-                    <div className="cursor-pointer hover:text-blue-600">
-                      <p className="text-sm font-medium">{order.product.name}</p>
-                      {order.product.original_name && order.product.original_name !== order.product.name && (
-                        <p className="text-xs text-gray-500">({order.product.original_name})</p>
-                      )}
-                      <p className="text-xs text-gray-600">{order.product.type}</p>
-                    </div>
+                    <button className="p-1 hover:bg-gray-200 rounded">
+                      <Eye className="h-4 w-4 text-gray-600" />
+                    </button>
                   </Link>
-                </td>
-
-                <td className="px-3 py-3">
-                  <p className="text-sm font-bold">{formatCurrency(order.pricing.final_amount)}</p>
-                  <p className="text-xs text-gray-500">
-                    수수료: {formatCurrency(order.pricing.commission)}
-                  </p>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            완료된 주문이 없습니다
-          </div>
-        )}
       </div>
+
+      {filteredOrders.length === 0 && (
+        <div className="text-center py-8">
+          <AlertCircle className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+          <p className="text-sm text-gray-600">조건에 맞는 주문이 없습니다</p>
+        </div>
+      )}
     </div>
   )
 }

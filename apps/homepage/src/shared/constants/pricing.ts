@@ -6,7 +6,7 @@
 
 // 화환 표준가격 (도매가) - 5개 등급 고정가
 export const FLORIST_STANDARD_PRICES = {
-  실속: 45000,    // 4.5만원
+  실속: 42000,    // 4.2만원 (수정)
   기본: 60000,    // 6만원
   대: 70000,      // 7만원
   특대: 80000,    // 8만원
@@ -20,7 +20,7 @@ export const PRODUCT_TO_FLORIST_PRICE_MAP = {
   // ===== 축하화환 (5등급 고정가) =====
   '실속 축하화환': { 
     customerPrice: 55000, 
-    floristPrice: 45000,  // 실속 등급
+    floristPrice: 42000,  // 실속 등급
     grade: '실속' as PriceGrade,
     category: '축하화환',
     isWreath: true
@@ -50,7 +50,7 @@ export const PRODUCT_TO_FLORIST_PRICE_MAP = {
   // ===== 근조화환 (5등급 고정가) =====
   '실속 근조화환': { 
     customerPrice: 55000, 
-    floristPrice: 45000,  // 실속 등급
+    floristPrice: 42000,  // 실속 등급
     grade: '실속' as PriceGrade,
     category: '근조화환',
     isWreath: true
@@ -238,7 +238,7 @@ export function getPricingInfo(productName: string): PricingInfo {
 export const FLORIST_UI_PRODUCTS = {
   '근조화환': [
     // 화환 5등급
-    { id: 'FW-E', name: '근조화환 실속형', price: 45000, grade: '실속', isWreath: true },
+    { id: 'FW-E', name: '근조화환 실속형', price: 42000, grade: '실속', isWreath: true },
     { id: 'FW-B', name: '근조화환 기본형', price: 60000, grade: '기본', isWreath: true },
     { id: 'FW-S', name: '근조화환 대형', price: 70000, grade: '대', isWreath: true },
     { id: 'FW-P', name: '근조화환 특대형', price: 80000, grade: '특대', isWreath: true },
@@ -250,7 +250,7 @@ export const FLORIST_UI_PRODUCTS = {
   ],
   '축하화환': [
     // 화환 5등급
-    { id: 'CW-E', name: '축하화환 실속형', price: 45000, grade: '실속', isWreath: true },
+    { id: 'CW-E', name: '축하화환 실속형', price: 42000, grade: '실속', isWreath: true },
     { id: 'CW-B', name: '축하화환 기본형', price: 60000, grade: '기본', isWreath: true },
     { id: 'CW-S', name: '축하화환 대형', price: 70000, grade: '대', isWreath: true },
     { id: 'CW-P', name: '축하화환 특대형', price: 80000, grade: '특대', isWreath: true },
