@@ -1,6 +1,7 @@
 [build]
-  command = "cd apps/homepage && pnpm install && pnpm run build"
-  publish = "apps/homepage/.next"
+  base = "apps/homepage"
+  command = "npm install && npm run build"
+  publish = ".next"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
