@@ -1,5 +1,5 @@
 [build]
-  command = "cd apps/homepage && pnpm run build"
+  command = "cd apps/homepage && pnpm install && pnpm run build"
   publish = "apps/homepage/.next"
 
 [[plugins]]
