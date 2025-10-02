@@ -138,7 +138,7 @@ export default function EmotionalNavbar({ showCategories = false, fixed = false,
             {/* Logo */}
             <Link href="/" className="flex items-center">
               <h1 className={`text-3xl font-bold tracking-tight transition-colors`}>
-                <span className={`${textColor}`}>BLOOM</span>
+                <span className={`${textColor}`}>RAINBOW-F</span>
               </h1>
             </Link>
 

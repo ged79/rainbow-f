@@ -7,21 +7,24 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* 회사 정보 */}
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-gray-900 font-bold text-lg mb-4">BLOOM</h3>
+            <h3 className="text-gray-900 font-bold text-lg mb-4">RAINBOW-F</h3>
             <p className="text-sm mb-2">
-              대표: [대표자명] | 사업자등록번호: [000-00-00000]
+              대표: 김영아 | 사업자등록번호: 853-81-03832
             </p>
             <p className="text-sm mb-2">
-              통신판매업신고: [제0000-서울강남-00000호]
+              통신판매업신고: 신고 진행중 {/* 영동군청 신고 예정 */}
             </p>
             <p className="text-sm mb-2">
-              주소: [서울특별시 강남구 ○○로 123]
+              업종: 전자상거래, 정보통신업, 소프트웨어 개발 및 공급
             </p>
             <p className="text-sm mb-2">
-              이메일: support@flowerdelivery.co.kr | 고객센터: 1600-0000
+              주소: 충북 영동군 영동읍 눈어치4로 4, 201
+            </p>
+            <p className="text-sm mb-2">
+              이메일: contact@connexus.co.kr | 전화: 010-7741-4569
             </p>
             <p className="text-xs mt-4 text-gray-600">
-              BLOOM은 통신판매중개자이며, 통신판매의 당사자가 아닙니다. 
+              RAINBOW-F는 통신판매중개자이며, 통신판매의 당사자가 아닙니다. 
               따라서 상품 거래정보 및 거래에 대한 책임은 판매자에게 있습니다.
             </p>
           </div>
@@ -33,9 +36,14 @@ export default function Footer() {
               <h4 className="text-gray-900 font-semibold mb-4">고객 지원</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/business" className="hover:text-gray-900 transition">
+                  <a 
+                    href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=8538103832" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-gray-900 transition"
+                  >
                     사업자정보확인
-                  </Link>
+                  </a>
                 </li>
                 <li>
                   <Link href="/faq" className="hover:text-gray-900 transition">
@@ -82,7 +90,7 @@ export default function Footer() {
         <div className="border-t border-gray-300 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-xs text-gray-600 mb-4 md:mb-0">
-              © 2024 BLOOM. All rights reserved.
+              © 2024 RAINBOW-F. All rights reserved.
             </p>
             <div className="flex space-x-6 text-xs">
               <Link href="/terms" className="hover:text-gray-900 transition">이용약관</Link>

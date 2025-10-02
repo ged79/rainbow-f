@@ -1,6 +1,6 @@
 {
-  "name": "꽃배달 플랫폼",
-  "short_name": "꽃배달",
+  "name": "RAINBOW-F 꽃배달 플랫폼",
+  "short_name": "RAINBOW-F",
   "description": "전국 꽃배달 주문 서비스 - 축하화환, 근조화환, 꽃다발",
   "theme_color": "#10b981",
   "background_color": "#ffffff",
@@ -8,7 +8,7 @@
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/?utm_source=pwa",
-  "id": "flower-delivery-pwa",
+  "id": "rainbow-f-pwa",
   "categories": ["shopping", "lifestyle"],
   "icons": [
     {

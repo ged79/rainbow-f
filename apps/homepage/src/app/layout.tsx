@@ -4,26 +4,26 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import Footer from '../components/Footer'
 
 export const metadata: Metadata = {
-  title: '꽃배달 플랫폼 - 전국 당일 꽃배송',
+  title: 'RAINBOW-F - 전국 당일 꽃배송',
   description: '축하화환, 근조화환, 꽃다발 전국 당일배송. 화원 직거래로 합리적인 가격',
-  keywords: '꽃배달, 화환, 근조화환, 축하화환, 꽃다발, 꽃바구니, 당일배송',
+  keywords: '꽃배달, 화환, 근조화환, 축하화환, 꽃다발, 꽃바구니, 당일배송, 레인보우에프',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '꽃배달',
+    title: 'RAINBOW-F',
   },
   openGraph: {
-    title: '꽃배달 플랫폼',
+    title: 'RAINBOW-F - 꽃배달 플랫폼',
     description: '전국 당일 꽃배송 서비스',
-    url: 'https://flower-delivery.co.kr',
-    siteName: '꽃배달',
+    url: 'https://rainbow-f.co.kr',
+    siteName: 'RAINBOW-F',
     images: ['/og-image.png'],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: '꽃배달',
+    title: 'RAINBOW-F',
     description: '전국 당일 꽃배송',
   },
   robots: {
