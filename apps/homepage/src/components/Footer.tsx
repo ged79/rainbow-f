@@ -45,16 +45,6 @@ export default function Footer() {
                     사업자정보확인
                   </a>
                 </li>
-                <li>
-                  <Link href="/faq" className="hover:text-gray-900 transition">
-                    자주 묻는 질문
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-gray-900 transition">
-                    문의하기
-                  </Link>
-                </li>
               </ul>
             </div>
 
@@ -62,16 +52,6 @@ export default function Footer() {
             <div>
               <h4 className="text-gray-900 font-semibold mb-4">파트너</h4>
               <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="/partner/register" className="hover:text-gray-900 transition">
-                    화원 입점신청
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/partner/guide" className="hover:text-gray-900 transition">
-                    입점 안내
-                  </Link>
-                </li>
                 <li>
                   <a href="/client/login" className="hover:text-gray-900 transition">
                     화원 로그인
