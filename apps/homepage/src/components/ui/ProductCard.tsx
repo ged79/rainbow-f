@@ -64,7 +64,9 @@ const ProductCard = memo(function ProductCard(props: ProductCardProps) {
             width={400}
             height={500}
             onLoad={() => setImageLoaded(true)}
-            className={`w-full h-full object-cover transition-all duration-700 ${
+            className={`w-full h-full ${
+              name.includes('영정바구니') ? 'object-contain bg-gray-200' : 'object-cover'
+            } object-center transition-all duration-700 ${
               imageLoaded ? 'opacity-100 group-hover:scale-110' : 'opacity-0'
             }`}
             quality={75}

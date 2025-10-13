@@ -9,10 +9,11 @@ import { getProductsByCategory } from '../services/productService'
 
 export default async function HomePage() {
   // DB에서 카테고리별 상품 가져오기
-  const [weddingProducts, funeralProducts, openingProducts] = await Promise.all([
+  const [weddingProducts, funeralProducts, openingProducts, anniversaryProducts] = await Promise.all([
     getProductsByCategory('wedding'),
     getProductsByCategory('funeral'),
-    getProductsByCategory('opening')
+    getProductsByCategory('opening'),
+    getProductsByCategory('anniversary')
   ])
 
   return (
@@ -21,30 +22,38 @@ export default async function HomePage() {
       <ModernHero />
       <PWAInstallPrompt />
       
-      {/* 결혼식화환 섹션 */}
+      {/* 결혼식 섹션 */}
       <div className="mt-8 md:mt-0">
         <ModernSection 
-          title="결혼식화환"
-          subtitle="영원한 사랑을 화환으로 전하세요"
+          title="결혼식"
+          subtitle="영원한 사랑을 전하세요"
           products={weddingProducts}
           bgColor="bg-gray-50"
         />
       </div>
       
-      {/* 근조화환 섹션 */}
+      {/* 장례식 섹션 */}
       <ModernSection 
-        title="근조화환"
-        subtitle="깊은 애도를 화환으로 전합니다"
+        title="장례식"
+        subtitle="깊은 애도를 전합니다"
         products={funeralProducts}
         bgColor="bg-white"
       />
       
-      {/* 개업·승진·축하화환 섹션 */}
+      {/* 개업·행사 섹션 */}
       <ModernSection 
-        title="개업·승진·축하화환"
-        subtitle="새로운 시작과 성공을 화환으로 축하합니다"
+        title="개업·행사"
+        subtitle="새로운 시작과 성공을 응원합니다"
         products={openingProducts}
         bgColor="bg-gray-50"
+      />
+      
+      {/* 승진·기념일 섹션 */}
+      <ModernSection 
+        title="승진·기념일"
+        subtitle="특별한 날을 축하합니다"
+        products={anniversaryProducts}
+        bgColor="bg-white"
       />
     </main>
   )

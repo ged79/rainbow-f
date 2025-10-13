@@ -9,13 +9,12 @@ import { loadFromStorage, saveToStorage } from '../lib/storage'
 
 // 카테고리 이름을 URL 경로로 변환하는 헬퍼 함수
 const getCategoryPath = (title: string): string => {
-  switch(title) {
-    case '개업·행사': return 'opening'
-    case '결혼식': return 'wedding'
-    case '장례식': return 'funeral'
-    case '승진·기념일': return 'celebration'
-    default: return 'opening'
-  }
+  // title 파라미터가 실제로는 "결혼식화환", "근조화환" 등으로 들어옴
+  if (title.includes('결혼')) return 'wedding'
+  if (title.includes('근조') || title.includes('장례')) return 'funeral'
+  if (title.includes('개업') || title.includes('축하')) return 'opening'
+  if (title.includes('승진') || title.includes('기념')) return 'anniversary'
+  return 'opening'
 }
 
 interface SectionProps {
@@ -387,12 +386,12 @@ export default function ModernSection({ title, subtitle, products = [], bgColor,
           </div>
           
           <div className="flex gap-3 mt-6">
-            <Link href={`/category/${title === '개업·행사' ? 'opening' : title === '결혼식' ? 'wedding' : title === '장례식' ? 'funeral' : title === '승진·기념일' ? 'celebration' : 'opening'}`} className="flex-1">
+            <Link href={`/category/${getCategoryPath(title)}`} className="flex-1">
               <button className="w-full px-4 py-2.5 border border-neutral-300 text-neutral-700 hover:bg-neutral-50 transition-colors text-sm font-medium">
                 전체보기
               </button>
             </Link>
-            <Link href={`/category/${title === '개업·행사' ? 'opening' : title === '결혼식' ? 'wedding' : title === '장례식' ? 'funeral' : title === '승진·기념일' ? 'celebration' : 'opening'}?sort=popular`} className="flex-1">
+            <Link href={`/category/${getCategoryPath(title)}?sort=popular`} className="flex-1">
               <button className="w-full px-4 py-2.5 bg-neutral-900 text-white hover:bg-neutral-800 transition-colors text-sm font-medium">
                 인기상품
               </button>
@@ -455,12 +454,12 @@ export default function ModernSection({ title, subtitle, products = [], bgColor,
         </div>
         
         <div className="flex gap-2 mt-4">
-          <Link href={`/category/${title === '개업·행사' ? 'opening' : title === '결혼식' ? 'wedding' : title === '장례식' ? 'funeral' : title === '승진·기념일' ? 'celebration' : 'opening'}`} className="flex-1">
+          <Link href={`/category/${getCategoryPath(title)}`} className="flex-1">
             <button className="w-full px-3 py-2 border border-neutral-300 text-neutral-700 text-sm font-medium">
               전체보기
             </button>
           </Link>
-          <Link href={`/category/${title === '개업·행사' ? 'opening' : title === '결혼식' ? 'wedding' : title === '장례식' ? 'funeral' : title === '승진·기념일' ? 'celebration' : 'opening'}?sort=popular`} className="flex-1">
+          <Link href={`/category/${getCategoryPath(title)}?sort=popular`} className="flex-1">
             <button className="w-full px-3 py-2 bg-neutral-900 text-white text-sm font-medium">
               인기상품
             </button>

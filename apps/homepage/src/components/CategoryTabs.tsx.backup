@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const categories = [
-  { id: 'wedding', name: '결혼식화환', path: '/category/wedding' },
-  { id: 'funeral', name: '근조화환', path: '/category/funeral' },
-  { id: 'opening', name: '개업·승진화환', path: '/category/opening' }
+  { id: 'wedding', name: '결혼식', path: '/category/wedding' },
+  { id: 'funeral', name: '장례식', path: '/category/funeral' },
+  { id: 'opening', name: '개업·행사', path: '/category/opening' },
+  { id: 'celebration', name: '승진·기념일', path: '/category/celebration' },
 ]
 
 interface CategoryTabsProps {
@@ -19,7 +20,7 @@ export default function CategoryTabs({ activeCategory }: CategoryTabsProps = {})
   return (
     <div className="sticky top-[60px] z-40 bg-white border-b md:top-16">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
-        <div className="flex gap-8 justify-center">
+        <div className="flex gap-8 overflow-x-auto scrollbar-hide">
           {categories.map((category) => (
             <Link
               key={category.id}

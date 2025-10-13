@@ -7,6 +7,7 @@ import PaymentModal from '../../components/PaymentModal'
 import ProductImageGallery from '../../components/ProductImageGallery'
 import Button from '../../components/ui/Button'
 import { Heart, ShoppingCart, Minus, Plus, MapPin, Calendar, Clock, Gift } from 'lucide-react'
+import DeliveryExamples from '../../components/DeliveryExamples'
 import { getProductFromDB, getRecommendedProducts, getProduct } from '../../lib/products'
 import { getProductById } from '../../services/productService'
 import type { ProductType, CreateOrderInput, HomepageProduct } from '../../types'
@@ -616,7 +617,7 @@ const OrderPage = () => {
                   </div>
                 )}
 
-{/* 수량 선택 */}
+            {/* 수량 선택 */}
                 <div className="flex items-center justify-between py-4 mb-4">
                   <span className="text-gray-700 font-medium">수량</span>
                   <div className="flex items-center space-x-3">
@@ -705,25 +706,8 @@ const OrderPage = () => {
           )}
         </div>
         
-        {/* 추천 상품 섹션 */}
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">추천 상품</h3>
-          <div className="grid grid-cols-4 gap-4">
-            {recommendedProducts.map((item: any) => (
-              <a key={item.id} href={`/order?id=${item.id}`} className="group">
-                <div className="aspect-[4/5] rounded-lg overflow-hidden mb-3 border">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                  />
-                </div>
-                <h4 className="font-medium text-gray-900 mb-1">{item.name}</h4>
-                <p className="text-lg font-bold text-green-600">{item.price.toLocaleString()}원</p>
-              </a>
-            ))}
-          </div>
-        </div>
+        {/* 실제 배송 사례 */}
+        <DeliveryExamples category={product?.category_1} />
       </div>
 
       {/* 모바일 레이아웃 - 기존 유지 */}
@@ -795,29 +779,8 @@ const OrderPage = () => {
           </div>
         </div>
 
-        {/* Recommended Products Section */}
-        <div className="bg-white shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ 추천 상품</h3>
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex space-x-4 pb-2">
-              {recommendedProducts.map((item: any) => (
-                <a key={item.id} href={`/order?id=${item.id}`} className="flex-shrink-0 w-32 cursor-pointer hover:opacity-80 transition-opacity">
-                  <div className="aspect-[4/5] bg-gray-100 rounded-lg overflow-hidden mb-2">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                    <p className="text-sm text-green-600 font-semibold">{item.price.toLocaleString()}원</p>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* 실제 배송 사례 - 모바일 */}
+        <DeliveryExamples category={product?.category_1} />
         
         {/* 리뷰 섹션 - 모바일 */}
         {productReviews.length > 0 && (
