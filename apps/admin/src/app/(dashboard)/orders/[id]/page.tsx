@@ -48,8 +48,8 @@ function OrderDetailContent() {
   const loadOrder = async () => {
     if (!params.id) return
 
-    // Homepage 주문인 경우 customer_orders 테이블에서 조회
-    if (source === 'homepage') {
+    // Homepage 또는 Funeral 주문인 경우 customer_orders 테이블에서 조회
+    if (source === 'homepage' || source === 'funeral') {
       const { data, error } = await supabase
         .from('customer_orders')
         .select('*')

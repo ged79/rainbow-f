@@ -102,6 +102,7 @@ export default function UnifiedOrdersPage() {
       .from('customer_orders')
       .select('*')
       .not('assigned_store_id', 'is', null)
+      .neq('assigned_store_id', '00000000-0000-0000-0000-000000000000')  // 본사 직접 처리 제외
       .neq('status', 'completed')
       .is('linked_order_id', null)
       .order('created_at', { ascending: false })

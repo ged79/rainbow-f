@@ -1,0 +1,36 @@
+// productService.ts에 추가할 추천 상품 함수
+
+export async function getRecommendedProducts(currentProductId: string): Promise<HomepageProduct[]> {
+  try {
+    // 현재 상품 정보 가져오기
+    const { data: currentProduct } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', currentProductId)
+      .single()
+    
+    if (!currentProduct) return []
+    
+    // 같은 카테고리의 다른 상품들 가져오기
+    const { data: recommendations } = await supabase
+      .from('products')
+      .select('*')
+      .eq('category_1', currentProduct.category_1)
+      .eq('is_active', true)
+      .neq('id', currentProductId)
+      .order('customer_price', { ascending: false })
+      .limit(4)
+    
+    return (recommendations || []).map(product => ({
+      id: product.id,
+      name: product.display_name,
+      price: product.customer_price || product.price,
+      image: product.image_url || '/placeholder.jpg',
+      description: product.description || '',
+      category: product.category_1
+    }))
+  } catch (error) {
+    console.error('Failed to fetch recommendations:', error)
+    return []
+  }
+}

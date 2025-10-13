@@ -28,7 +28,10 @@ import {
 export default function CompletedOrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<UnifiedOrder[]>([])
+  const [funeralOrders, setFuneralOrders] = useState<any[]>([])
   const [filteredOrders, setFilteredOrders] = useState<UnifiedOrder[]>([])
+  const [filteredFuneralOrders, setFilteredFuneralOrders] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<'regular' | 'funeral'>('regular')
   const [isLoading, setIsLoading] = useState(true)
   
   const [searchQuery, setSearchQuery] = useState('')
@@ -45,7 +48,7 @@ export default function CompletedOrdersPage() {
 
   useEffect(() => {
     applyFilters()
-  }, [orders, searchQuery, sourceFilter])
+  }, [orders, funeralOrders, searchQuery, sourceFilter])
 
   const loadCompletedOrders = async () => {
     try {
@@ -63,21 +66,35 @@ export default function CompletedOrdersPage() {
         .from('customer_orders')
         .select('*')
         .eq('status', 'completed')
+        .neq('order_source', 'funeral')  // funeral 제외
         .is('linked_order_id', null)
         .order('updated_at', { ascending: false })
+
+      const { data: funeralCompleteOrders } = await supabase
+        .from('customer_orders')
+        .select('*')
+        .eq('status', 'completed')
+        .eq('order_source', 'funeral')  // funeral만
+        .order('updated_at', { ascending: false })
+
+      // funeral_orders 테이블 제거, customer_orders로 통합
 
       const unified = [
         ...(clientOrders || []).map(clientToUnifiedOrder),
         ...(homepageOrders || []).map(homepageToUnifiedOrder)
       ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
+      const funeralUnified = (funeralCompleteOrders || []).map(homepageToUnifiedOrder)
+
       setOrders(unified)
+      setFuneralOrders(funeralUnified)
     } finally {
       setIsLoading(false)
     }
   }
 
   const applyFilters = () => {
+    // 일반 주문 필터링
     let filtered = [...orders]
     
     if (sourceFilter !== 'all') {
@@ -95,6 +112,20 @@ export default function CompletedOrdersPage() {
     }
     
     setFilteredOrders(filtered)
+
+    // 부고 주문 필터링
+    let filteredFuneral = [...funeralOrders]
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filteredFuneral = filteredFuneral.filter(o =>
+        o.order_number.toLowerCase().includes(query) ||
+        o.customer.name.toLowerCase().includes(query) ||
+        o.recipient.name.toLowerCase().includes(query) ||
+        o.recipient.phone.includes(query)
+      )
+    }
+    
+    setFilteredFuneralOrders(filteredFuneral)
   }
 
   const stats = {
@@ -117,6 +148,30 @@ export default function CompletedOrdersPage() {
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-xl lg:text-2xl font-bold mb-3">배송완료 주문 내역</h1>
+        
+        {/* 탭 */}
+        <div className="flex space-x-4 mb-4">
+          <button
+            onClick={() => setActiveTab('regular')}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              activeTab === 'regular'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            일반 주문 ({filteredOrders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('funeral')}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              activeTab === 'funeral'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            부고 주문 ({filteredFuneralOrders.length})
+          </button>
+        </div>
         
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2 mb-3">
@@ -161,16 +216,18 @@ export default function CompletedOrdersPage() {
       {/* Mobile View - Cards */}
       <div className="lg:hidden">
         <div className="space-y-2">
-          {filteredOrders.map((order) => (
+          {(activeTab === 'regular' ? filteredOrders : filteredFuneralOrders).map((order) => (
             <div key={order.id} className="bg-white border rounded-lg p-3">
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <span className={`inline-block px-1.5 py-0.5 text-xs rounded mr-2 ${
-                    order.source === 'homepage' 
+                    order.source === 'funeral'
+                      ? 'bg-purple-100 text-purple-700'
+                      : order.source === 'homepage' 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-blue-100 text-blue-700'
                   }`}>
-                    {order.source === 'homepage' ? 'HP' : 'CL'}
+                    {order.source === 'homepage' ? 'HP' : order.source === 'funeral' ? 'FNR' : 'CL'}
                   </span>
                   <span className="text-sm font-medium">{order.order_number}</span>
                 </div>
@@ -206,7 +263,7 @@ export default function CompletedOrdersPage() {
                 </div>
               </div>
 
-              <Link href={`/orders/${order.id}?source=${order.source}`} className="mt-2 block">
+              <Link href={`/orders/${order.id}?source=${order.source === 'funeral' ? 'funeral' : order.source}`} className="mt-2 block">
                 <button className="w-full py-1.5 bg-gray-100 text-xs rounded hover:bg-gray-200">
                   상세보기
                 </button>
@@ -235,18 +292,25 @@ export default function CompletedOrdersPage() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {filteredOrders.map((order) => (
+            {(activeTab === 'regular' ? filteredOrders : filteredFuneralOrders).map((order) => (
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="px-3 py-2">
                   <span className={`inline-block px-1.5 py-0.5 text-xs rounded ${
-                    order.source === 'homepage' 
+                    order.source === 'funeral'
+                      ? 'bg-purple-100 text-purple-700'
+                      : order.source === 'homepage' 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-blue-100 text-blue-700'
                   }`}>
-                    {order.source === 'homepage' ? 'HP' : 'CL'}
+                    {order.source === 'funeral' ? 'FNR' : order.source === 'homepage' ? 'HP' : 'CL'}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-xs font-medium">{order.order_number}</td>
+                <td className="px-3 py-2 text-xs font-medium">
+                  {order.order_number}
+                  {order.source === 'funeral' && (
+                    <span className="ml-1 text-purple-600 text-xs">🏺</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-xs">{formatDate(order.created_at)}</td>
                 <td className="px-3 py-2 text-xs">
                   {formatDate(order.completion?.completed_at || order.updated_at)}
@@ -270,7 +334,7 @@ export default function CompletedOrdersPage() {
                   {formatCurrency(order.payment?.total || 0)}
                 </td>
                 <td className="px-3 py-2 text-center">
-                  <Link href={`/orders/${order.id}?source=${order.source}`}>
+                  <Link href={`/orders/${order.id}?source=${order.source === 'funeral' ? 'funeral' : order.source}`}>
                     <button className="p-1 hover:bg-gray-200 rounded">
                       <Eye className="h-4 w-4 text-gray-600" />
                     </button>
@@ -282,7 +346,7 @@ export default function CompletedOrdersPage() {
         </table>
       </div>
 
-      {filteredOrders.length === 0 && (
+      {(activeTab === 'regular' ? filteredOrders.length === 0 : filteredFuneralOrders.length === 0) && (
         <div className="text-center py-8">
           <AlertCircle className="h-8 w-8 mx-auto text-gray-400 mb-2" />
           <p className="text-sm text-gray-600">조건에 맞는 주문이 없습니다</p>

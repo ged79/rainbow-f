@@ -10,7 +10,7 @@ interface AdminDeliveryCompleteModalProps {
   onClose: () => void
   orderId: string
   orderNumber: string
-  source: 'homepage' | 'client'
+  source: 'homepage' | 'client' | 'funeral'
   onComplete?: () => void
 }
 
@@ -86,17 +86,59 @@ export default function AdminDeliveryCompleteModal({
         completed_at: new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(' ', 'T') + '+09:00'
       }
 
-      // 두 테이블 모두 completion JSONB 필드 사용
-      const { error } = await supabase
-        .from(source === 'homepage' ? 'customer_orders' : 'orders')
-        .update({ 
+      // source에 따라 다른 테이블 업데이트
+      if (source === 'homepage' || source === 'funeral') {
+        // customer_orders 테이블 - 미배정 상태면 본사로 배정
+        const { data: currentOrder } = await supabase
+          .from('customer_orders')
+          .select('assigned_store_id')
+          .eq('id', orderId)
+          .single()
+        
+        const updateData: any = {
           status: 'completed',
           completion: completionData,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId)
-
-      if (error) throw error
+        }
+        
+        // 미배정이면 본사로 자동 배정
+        if (!currentOrder?.assigned_store_id) {
+          updateData.assigned_store_id = '00000000-0000-0000-0000-000000000000'
+          updateData.assigned_at = new Date().toISOString()
+        }
+        
+        const { error } = await supabase
+          .from('customer_orders')
+          .update(updateData)
+          .eq('id', orderId)
+          
+        if (error) throw error
+      } else {
+        // orders 테이블 - 미배정 상태면 본사로 배정
+        const { data: currentOrder } = await supabase
+          .from('orders')
+          .select('receiver_store_id')
+          .eq('id', orderId)
+          .single()
+        
+        const updateData: any = {
+          status: 'completed',
+          completion: completionData,
+          updated_at: new Date().toISOString()
+        }
+        
+        // 미배정이면 본사로 자동 배정
+        if (!currentOrder?.receiver_store_id) {
+          updateData.receiver_store_id = '00000000-0000-0000-0000-000000000000'
+        }
+        
+        const { error } = await supabase
+          .from('orders')
+          .update(updateData)
+          .eq('id', orderId)
+          
+        if (error) throw error
+      }
 
       toast.success('배송완료 처리되었습니다')
       onComplete?.()

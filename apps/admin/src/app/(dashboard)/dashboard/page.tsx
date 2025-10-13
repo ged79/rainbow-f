@@ -297,25 +297,25 @@ export default function DashboardPage() {
   if (isLoading) return <div className="p-8">Loading...</div>
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
       {/* 실시간 모니터링 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium text-gray-900">실시간 모니터링</h2>
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <h2 className="text-base sm:text-lg font-medium text-gray-900">실시간 모니터링</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">
               마지막 업데이트: {lastUpdate.toLocaleTimeString('ko-KR')}
             </span>
             <button 
               onClick={loadDashboard}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 p-1"
             >
-              <RefreshCw className="h-5 w-5" />
+              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <div className={`p-4 rounded-lg ${metrics.pendingOrders > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
             <div className="flex justify-between items-start">
               <div>
@@ -374,7 +374,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 오늘 실적 */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <DollarSign className="h-8 w-8 text-green-500" />
@@ -428,7 +428,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 긴급 처리 & 문제 화원 */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 긴급 처리 필요 */}
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b flex justify-between items-center">
@@ -546,7 +546,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Link href="/orders/assignment" className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition">
           <div className="flex items-center justify-between">
             <div>

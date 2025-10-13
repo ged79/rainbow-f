@@ -6,9 +6,12 @@ import { UnifiedOrder, OrderStatus } from '../types'
 export function homepageToUnifiedOrder(order: any): UnifiedOrder {
   const address = order.recipient_address
   
+  // 🏺 Funeral 주문인 경우 별도 source 설정
+  const source = order.order_source === 'funeral' ? 'funeral' : 'homepage'
+  
   return {
     id: order.id,
-    source: 'homepage',
+    source: source,
     order_number: order.order_number,
     status: mapHomepageStatus(order.status),
     created_at: order.created_at,
@@ -49,17 +52,7 @@ export function homepageToUnifiedOrder(order: any): UnifiedOrder {
       ribbon_text: Array.isArray(order.ribbon_text) ? order.ribbon_text : [order.ribbon_text].filter(Boolean),
       special_instructions: order.special_instructions
     },
-    
-    products: [
-      {
-        type: order.mapped_category || order.product_category || '기타',
-        name: order.product_name,
-        price: order.mapped_price || order.total_amount,
-        quantity: order.quantity || 1,
-        ribbon_text: Array.isArray(order.ribbon_text) ? order.ribbon_text : [order.ribbon_text].filter(Boolean),
-        special_instructions: order.special_instructions
-      }
-    ],
+
     
     pricing: {
       base_price: order.original_price,
@@ -154,14 +147,6 @@ export function clientToUnifiedOrder(order: any): UnifiedOrder {
       name: '',
       price: 0,
       quantity: 1
-    },
-    
-    products: order.product ? [order.product] : [],
-    
-    payment: order.payment || {
-      subtotal: 0,
-      commission: 0,
-      total: 0
     },
     
     pricing: {

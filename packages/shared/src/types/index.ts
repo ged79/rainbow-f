@@ -318,7 +318,7 @@ export interface CreateOrderInput {
 
 export interface UnifiedOrder {
   id: string
-  source: 'homepage' | 'client'
+  source: 'homepage' | 'client' | 'funeral'
   order_number: string
   status: OrderStatus
   created_at: string

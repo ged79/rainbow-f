@@ -26,15 +26,19 @@ import {
   Calendar
 } from 'lucide-react'
 import AdminDeliveryCompleteModal from '@/components/AdminDeliveryCompleteModal'
+import FuneralDeliveryCompleteModal from '@/components/FuneralDeliveryCompleteModal'
 
 export default function OrderAssignmentPage() {
   const [unassignedOrders, setUnassignedOrders] = useState<UnifiedOrder[]>([])
+  const [funeralOrders, setFuneralOrders] = useState<any[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [selectedOrder, setSelectedOrder] = useState<UnifiedOrder | null>(null)
   const [selectedStore, setSelectedStore] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [isAssigning, setIsAssigning] = useState(false)
   const [deliveryCompleteOrder, setDeliveryCompleteOrder] = useState<UnifiedOrder | null>(null)
+  const [funeralDeliveryCompleteOrder, setFuneralDeliveryCompleteOrder] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<'regular' | 'funeral'>('regular')
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,7 +48,131 @@ export default function OrderAssignmentPage() {
   useEffect(() => {
     loadData()
     const interval = setInterval(loadData, 30000)
-    return () => clearInterval(interval)
+    
+    // 알림음 함수 (3번 비프음)
+    const playNotificationSound = () => {
+      try {
+        const context = new (window.AudioContext || (window as any).webkitAudioContext)()
+        
+        const playBeep = (startTime: number) => {
+          const oscillator = context.createOscillator()
+          const gainNode = context.createGain()
+          
+          oscillator.connect(gainNode)
+          gainNode.connect(context.destination)
+          
+          oscillator.frequency.value = 880
+          gainNode.gain.setValueAtTime(0.3, startTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3)
+          
+          oscillator.start(startTime)
+          oscillator.stop(startTime + 0.3)
+        }
+        
+        playBeep(context.currentTime)
+        playBeep(context.currentTime + 0.4)
+        playBeep(context.currentTime + 0.8)
+      } catch (e) {
+        console.log('Notification sound failed:', e)
+      }
+    }
+
+    // 3시간 경과 주문 체크
+    const checkOverdueOrders = async () => {
+      try {
+        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+        const notifiedKey = 'notified_overdue_orders'
+        const notified = JSON.parse(localStorage.getItem(notifiedKey) || '[]')
+
+        const { data: overdueOrders } = await supabase
+          .from('customer_orders')
+          .select('id, order_number, created_at')
+          .is('assigned_store_id', null)
+          .eq('status', 'pending')
+          .lt('created_at', threeHoursAgo)
+
+        const { data: overdueClientOrders } = await supabase
+          .from('orders')
+          .select('id, order_number, created_at')
+          .is('receiver_store_id', null)
+          .eq('status', 'pending')
+          .lt('created_at', threeHoursAgo)
+
+        const allOverdue = [...(overdueOrders || []), ...(overdueClientOrders || [])]
+        const newOverdue = allOverdue.filter(order => !notified.includes(order.id))
+
+        if (newOverdue.length > 0) {
+          playNotificationSound()
+          toast.error(`⚠️ ${newOverdue.length}건의 주문이 3시간 이상 미배정 상태입니다!`, {
+            duration: 10000
+          })
+          
+          const updatedNotified = [...notified, ...newOverdue.map(o => o.id)]
+          localStorage.setItem(notifiedKey, JSON.stringify(updatedNotified))
+        }
+      } catch (error) {
+        console.error('Overdue check failed:', error)
+      }
+    }
+
+    checkOverdueOrders()
+    const overdueInterval = setInterval(checkOverdueOrders, 5 * 60 * 1000)
+    // Realtime 구독
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'customer_orders', filter: 'status=eq.pending' },
+        (payload) => {
+          console.log('New customer order:', payload)
+          console.log('Order source:', payload.new.order_source)
+          console.log('Payload.new:', payload.new)
+          
+          playNotificationSound()
+          
+          if (payload.new.order_source === 'funeral') {
+            console.log('🔔 Showing funeral toast')
+            toast.success('새 부고 주문이 들어왔습니다!', {
+              icon: '🔔',
+              duration: 5000
+            })
+          } else {
+            console.log('🔔 Showing homepage toast')
+            toast.success('새 홈페이지 주문이 들어왔습니다!', {
+              icon: '🔔',
+              duration: 5000
+            })
+          }
+          loadData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders', filter: 'status=eq.pending' },
+        (payload) => {
+          console.log('New client order:', payload)
+          
+          playNotificationSound()
+          
+          toast.success('새 화원 주문이 들어왔습니다!', {
+            icon: '🔔',
+            duration: 5000
+          })
+          loadData()
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Realtime connected successfully')
+        }
+      })
+    
+    return () => {
+      clearInterval(interval)
+      clearInterval(overdueInterval)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const loadData = async () => {
@@ -67,6 +195,13 @@ export default function OrderAssignmentPage() {
         .eq('status', 'pending')
         .order('created_at', { ascending: true })
 
+      const { data: funeralOrdersData } = await supabase
+        .from('customer_orders')
+        .select('*')
+        .eq('order_source', 'funeral')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+
       const { data: storeList } = await supabase
         .from('stores')
         .select('*')
@@ -79,6 +214,7 @@ export default function OrderAssignmentPage() {
       ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
       setUnassignedOrders(unified)
+      setFuneralOrders(funeralOrdersData || [])
       setStores(storeList || [])
     } finally {
       setIsLoading(false)
@@ -102,7 +238,6 @@ export default function OrderAssignmentPage() {
         
         if (assignError) throw assignError
       
-      // 트리거가 실행된 후 실제 생성된 주문 확인
       const { data: checkOrder } = await supabase
         .from('orders')
         .select('order_number')
@@ -139,7 +274,6 @@ export default function OrderAssignmentPage() {
 
   const getEligibleStores = (order: UnifiedOrder) => {
     const addr = order.recipient.address
-    
     let searchSido = addr.sido?.trim()
     let searchSigungu = addr.sigungu?.trim()
     let searchDong = addr.dong?.trim()
@@ -204,6 +338,16 @@ export default function OrderAssignmentPage() {
     })
   }
 
+  const parseCustomerName = (name: string) => {
+    if (name?.includes('|')) {
+      const parts = name.split('|')
+      const deceased = parts[0]?.replace('고인:', '').trim()
+      const mourner = parts[1]?.replace('상주:', '').trim()
+      return { deceased, mourner }
+    }
+    return { deceased: name, mourner: '' }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -213,116 +357,210 @@ export default function OrderAssignmentPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">미배정 주문</h1>
-        <p className="text-gray-600 mt-2">배정 대기중인 주문을 화원에 할당합니다</p>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">미배정 주문</h1>
+        <p className="text-sm sm:text-base text-gray-600 mt-2">배정 대기중인 주문을 화원에 할당합니다</p>
+        
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-4">
+          <button
+            onClick={() => setActiveTab('regular')}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              activeTab === 'regular'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            일반 주문 ({unassignedOrders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('funeral')}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              activeTab === 'funeral'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            부고 주문 ({funeralOrders.length})
+          </button>
+        </div>
       </div>
 
-      {unassignedOrders.length === 0 ? (
+      {(activeTab === 'regular' ? unassignedOrders.length === 0 : funeralOrders.length === 0) ? (
         <div className="text-center py-16 bg-white rounded-lg shadow">
           <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-          <p className="text-xl text-gray-600">모든 주문이 배정되었습니다</p>
+          <p className="text-xl text-gray-600">
+            {activeTab === 'regular' ? '모든 주문이 배정되었습니다' : '모든 부고 주문이 배정되었습니다'}
+          </p>
         </div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Order List */}
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Package className="h-5 w-5" />
-              대기중 주문 ({unassignedOrders.length})
+              {activeTab === 'regular' 
+                ? `대기중 주문 (${unassignedOrders.length})` 
+                : `부고 주문 (${funeralOrders.length})`
+              }
             </h2>
             
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {unassignedOrders.map((order) => (
-                <div
-                  key={order.id}
-                  onClick={() => setSelectedOrder(order)}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                    selectedOrder?.id === order.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">
-                        #{order.order_number}
-                      </span>
-                      {order.source === 'homepage' && (
-                        <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">
-                          홈페이지
+              {activeTab === 'regular' ? (
+                unassignedOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                      selectedOrder?.id === order.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">
+                          #{order.order_number}
                         </span>
-                      )}
+                        {order.source === 'homepage' && (
+                          <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">
+                            홈페이지
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {formatDate(order.created_at)}
+                      </span>
                     </div>
-                    <span className="text-sm text-gray-500">
-                      {formatDate(order.created_at)}
-                    </span>
+                    
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2 text-blue-700">
+                        <User className="h-4 w-4" />
+                        <span className="font-medium">주문: {order.customer.name} ({formatPhone(order.customer.phone)})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-400" />
+                        <span>받는분: {order.recipient.name} ({formatPhone(order.recipient.phone)})</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <span className="flex-1">
+                          {order.recipient.address.sido} {order.recipient.address.sigungu} 
+                          {order.recipient.address.dong} {order.recipient.address.detail}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-gray-400" />
+                        <span className="font-medium">
+                          {order.products?.map(p => p.name).join(', ') || order.product?.name || '상품정보 없음'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span>
+                          {order.delivery?.date || formatDate(order.created_at)} 
+                          {order.delivery?.time || 
+                           (order.delivery?.status === 'express' ? 
+                            `즉시(${new Date(new Date(order.created_at).getTime() + 3*60*60*1000).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}까지)` : 
+                            '시간미정')
+                          }
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold">
+                          {formatCurrency(order.payment?.total || order.pricing?.final_amount || 0)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeliveryCompleteOrder(order)
+                        }}
+                        className="mt-2 w-full py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                      >
+                        <Truck className="h-4 w-4" />
+                        배송완료 처리
+                      </button>
+                    </div>
                   </div>
+                ))
+              ) : (
+                funeralOrders.map((order) => {
+                  const deceasedName = order.funeral_data?.deceased_name || order.recipient_name?.replace('고 ', '') || '정보 없음'
+                  const mournerInfo = order.funeral_data?.mourner_info || ''
                   
-                  <div className="space-y-1 text-sm">
-                    {/* 주문자 정보 추가 */}
-                    <div className="flex items-center gap-2 text-blue-700">
-                      <User className="h-4 w-4" />
-                      <span className="font-medium">주문: {order.customer.name} ({formatPhone(order.customer.phone)})</span>
-                    </div>
-                    {/* 수령인 정보 */}
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span>받는분: {order.recipient.name} ({formatPhone(order.recipient.phone)})</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                      <span className="flex-1">
-                        {order.recipient.address.sido} {order.recipient.address.sigungu} 
-                        {order.recipient.address.dong} {order.recipient.address.detail}
-                      </span>
-                    </div>
-                    {/* 상품명 추가 */}
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <span className="font-medium">
-                        {order.products?.map(p => p.name).join(', ') || order.product?.name || '상품정보 없음'}
-                      </span>
-                    </div>
-                    {/* 배달일시 추가 */}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span>
-                        {order.delivery?.date || formatDate(order.created_at)} 
-                        {order.delivery?.time || 
-                         (order.delivery?.status === 'express' ? 
-                          `즉시(${new Date(new Date(order.created_at).getTime() + 3*60*60*1000).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}까지)` : 
-                          '시간미정')
-                        }
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold">
-                        {formatCurrency(order.payment?.total || order.pricing?.final_amount || 0)}
-                      </span>
-                    </div>
-                    {/* 배송완료 버튼 추가 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setDeliveryCompleteOrder(order)
-                      }}
-                      className="mt-2 w-full py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                  return (
+                    <div
+                      key={order.id}
+                      className="p-4 border rounded-lg border-gray-200 hover:border-gray-300 transition-all"
                     >
-                      <Truck className="h-4 w-4" />
-                      배송완료 처리
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm font-medium text-purple-600">
+                          부고주문 #{order.id.slice(0, 8)}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {formatDate(order.created_at)}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-gray-400" />
+                          <span className="font-medium text-purple-700">
+                            고인: {deceasedName}
+                          </span>
+                        </div>
+                        {mournerInfo && (
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-blue-400" />
+                            <span className="font-medium">상주: {mournerInfo}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-gray-400" />
+                          <span>보내는분: {order.funeral_data?.sender_name || order.customer_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span>연락처: {order.customer_phone}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                          <span className="flex-1">{typeof order.recipient_address === 'object' ? order.recipient_address.detail : order.recipient_address}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-gray-400" />
+                          <span className="font-medium">{order.product_name}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                          리본: {order.funeral_data?.ribbon_message || order.special_instructions}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-purple-600">₩{order.total_amount?.toLocaleString()}원</span>
+                          <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded">
+                            {order.status === 'pending' ? '대기중' : order.status}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setFuneralDeliveryCompleteOrder(order)}
+                          className="mt-2 w-full py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                        >
+                          <Truck className="h-4 w-4" />
+                          배송완료 처리
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </div>
 
-          {/* Store Selection */}
           <div className="bg-white rounded-lg shadow p-6">
             {selectedOrder ? (
               <>
@@ -381,7 +619,7 @@ export default function OrderAssignmentPage() {
                 <button
                   onClick={handleAssign}
                   disabled={!selectedStore || isAssigning}
-                  className="mt-4 w-full py-3 bg-blue-600 text-white rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+                  className="mt-4 w-full py-3 sm:py-4 text-base sm:text-lg bg-blue-600 text-white rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors active:scale-95"
                 >
                   {isAssigning ? '배정 중...' : '주문 배정하기'}
                 </button>
@@ -405,6 +643,19 @@ export default function OrderAssignmentPage() {
           source={deliveryCompleteOrder.source}
           onComplete={() => {
             setDeliveryCompleteOrder(null)
+            loadData()
+          }}
+        />
+      )}
+      
+      {funeralDeliveryCompleteOrder && (
+        <FuneralDeliveryCompleteModal
+          isOpen={!!funeralDeliveryCompleteOrder}
+          onClose={() => setFuneralDeliveryCompleteOrder(null)}
+          orderId={funeralDeliveryCompleteOrder.id}
+          orderData={funeralDeliveryCompleteOrder}
+          onComplete={() => {
+            setFuneralDeliveryCompleteOrder(null)
             loadData()
           }}
         />
