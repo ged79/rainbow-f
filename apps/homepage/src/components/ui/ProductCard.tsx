@@ -103,12 +103,12 @@ const ProductCard = memo(function ProductCard(props: ProductCardProps) {
         </div>
         
         <div className="p-4">
-          <h3 className="text-sm font-semibold text-neutral-900 mb-1 line-clamp-1 group-hover:text-rose-500 transition-colors">
+          <h3 className="text-base font-semibold text-neutral-900 mb-1 line-clamp-1 group-hover:text-rose-500 transition-colors">
             {name}
           </h3>
           
           {description && (
-            <p className="text-xs text-neutral-500 mb-3 line-clamp-2 leading-relaxed">
+            <p className="text-sm text-neutral-500 mb-3 line-clamp-2 leading-relaxed">
               {description}
             </p>
           )}
@@ -120,7 +120,7 @@ const ProductCard = memo(function ProductCard(props: ProductCardProps) {
                   {originalPrice.toLocaleString()}원
                 </span>
               )}
-              <span className="text-lg font-black text-neutral-900">
+              <span className="text-xl font-black text-neutral-900">
                 {(price || 0).toLocaleString()}
                 <span className="text-sm font-medium">원</span>
               </span>

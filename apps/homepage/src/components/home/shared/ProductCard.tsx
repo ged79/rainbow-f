@@ -53,8 +53,8 @@ export default function ProductCard({
             </button>
           </div>
           <div className="p-3">
-            <h3 className="font-medium text-sm text-gray-900 line-clamp-1">{name}</h3>
-            <p className="text-lg font-bold text-pink-600 mt-1">{formattedPrice}원</p>
+            <h3 className="font-medium text-base text-gray-900 line-clamp-1">{name}</h3>
+            <p className="text-xl font-bold text-pink-600 mt-1">{formattedPrice}원</p>
             <div className="flex gap-2 mt-2">
               <span className="text-xs bg-gray-100 px-2 py-1 rounded">당일배송</span>
               <span className="text-xs bg-pink-50 text-pink-600 px-2 py-1 rounded">인기</span>
@@ -118,12 +118,12 @@ export default function ProductCard({
             </div>
           </div>
           
-          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-pink-600 transition-colors">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-pink-600 transition-colors">
             {name}
           </h3>
           
           <div className="flex items-baseline justify-between">
-            <p className="text-xl font-bold text-gray-900">{formattedPrice}원</p>
+            <p className="text-2xl font-bold text-gray-900">{formattedPrice}원</p>
             <span className="text-xs text-gray-500">당일배송 가능</span>
           </div>
           
