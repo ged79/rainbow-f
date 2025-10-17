@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Placeholder Generator</title>
+</head>
+<body>
+    <canvas id="canvas" width="400" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 배경색
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillRect(0, 0, 400, 400);
+        
+        // 아이콘
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('이미지 준비중', 200, 200);
+        
+        // 다운로드 링크 생성
+        canvas.toBlob(function(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'placeholder.jpg';
+            a.textContent = 'placeholder.jpg 다운로드';
+            document.body.appendChild(a);
+        }, 'image/jpeg');
+    </script>
+</body>
+</html>
