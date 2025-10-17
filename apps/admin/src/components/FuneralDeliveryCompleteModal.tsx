@@ -84,13 +84,27 @@ export default function FuneralDeliveryCompleteModal({
         completed_at: new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(' ', 'T') + '+09:00'
       }
 
+      // 미배정 주문은 본사로 자동 배정
+      const { data: currentOrder } = await supabase
+        .from('customer_orders')
+        .select('assigned_store_id')
+        .eq('id', orderId)
+        .single()
+
+      const updateData: any = {
+        status: 'completed',
+        completion: completionData,
+        updated_at: new Date().toISOString()
+      }
+
+      if (!currentOrder?.assigned_store_id) {
+        updateData.assigned_store_id = '00000000-0000-0000-0000-000000000000'
+        updateData.assigned_at = new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from('customer_orders')
-        .update({ 
-          status: 'completed',
-          completion: completionData,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', orderId)
 
       if (error) throw error
