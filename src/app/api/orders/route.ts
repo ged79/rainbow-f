@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
     
     // SMS 발송
     try {
-      const smsMessage = `[무지개꽃] 주문이 완료되었습니다.\n주문번호: ${orderNumber}\n금액: ${totalAmount.toLocaleString()}원\n배송일: ${orderData.delivery_date}`
+      const smsMessage = `[무지개꽃] 주문이 완료되었습니다.\n주문번호: ${orderNumber}\n금액: ${totalAmount.toLocaleString()}원\n배송일: ${body.deliveryDate || body.delivery_date}`
       
       await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
         method: 'POST',
