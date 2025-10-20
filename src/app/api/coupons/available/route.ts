@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 // GET: User's available coupons/points
 export async function GET(request: NextRequest) {
+  // Rate limiting: 포인트 조회 (IP당 분당 30회)
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+  const rateLimitKey = `coupon-check:${clientIp}`
+  
+  if (!(await checkRateLimit(rateLimitKey))) {
+    return NextResponse.json(
+      { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    )
+  }
+  
   const { searchParams } = new URL(request.url)
   const phone = searchParams.get('phone')
 
@@ -50,9 +64,13 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Coupon query error:', error)
+    console.error('[Coupon Query Error]', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+    
     return NextResponse.json({ 
-      error: '포인트 조회 실패' 
+      error: '포인트 조회 중 오류가 발생했습니다.' 
     }, { status: 500 })
   }
 }

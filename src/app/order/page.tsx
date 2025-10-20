@@ -452,6 +452,41 @@ const OrderPage = () => {
       return
     }
     
+    // 주문 데이터를 localStorage에 저장 (결제 완료 후 사용)
+    const fullAddress = {
+      ...orderData.recipient_address,
+      detail: detailAddress
+    }
+    
+    const pendingOrderData = {
+      ...orderData,
+      product_quantity: quantity,
+      referrerPhone: referrerPhone,
+      customerPhone: orderData.customer_phone,
+      customer_phone: orderData.customer_phone,
+      customerName: orderData.customer_name,
+      customer_name: orderData.customer_name,
+      recipientName: orderData.recipient_name,
+      recipientPhone: orderData.recipient_phone,
+      deliveryAddress: fullAddress,
+      deliveryDate: orderData.delivery_date,
+      deliveryTime: orderData.delivery_time,
+      message: orderData.special_instructions,
+      ribbonMessage: orderData.ribbon_text || '',
+      totalAmount: product.price * quantity - discountAmount,
+      total_amount: product.price * quantity - discountAmount,
+      discountAmount: discountAmount,
+      discount_amount: discountAmount,
+      items: [{
+        productId: product.id,
+        productName: product.name,
+        productImage: product.image,
+        price: product.price,
+        quantity: quantity
+      }]
+    }
+    
+    localStorage.setItem('pendingOrder', JSON.stringify(pendingOrderData))
     console.log('Order submitted with discount:', discountAmount, 'usePoints:', usePoints)
     setShowPaymentModal(true)
   }

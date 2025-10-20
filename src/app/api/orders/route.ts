@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 function generateCouponCode(): string {
   return `CP${Date.now().toString(36).toUpperCase()}`
@@ -14,6 +15,19 @@ function generateOrderNumber(): string {
 
 // GET: Order lookup - SECURE
 export async function GET(request: NextRequest) {
+  // Rate limiting: 조회 API (분당 20회)
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+  const rateLimitKey = `order-lookup:${clientIp}`
+  
+  if (!(await checkRateLimit(rateLimitKey))) {
+    return NextResponse.json(
+      { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    )
+  }
+  
   const { searchParams } = new URL(request.url)
   const name = searchParams.get('name')
   const phone = searchParams.get('phone')
@@ -92,6 +106,19 @@ export async function GET(request: NextRequest) {
 
 // POST: Create order - SECURE
 export async function POST(request: NextRequest) {
+  // Rate limiting: 주문 생성 (IP당 분당 5회)
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+  const rateLimitKey = `order-create:${clientIp}`
+  
+  if (!(await checkRateLimit(rateLimitKey))) {
+    return NextResponse.json(
+      { error: '주문 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    )
+  }
+  
   try {
     const body = await request.json()
     const orderNumber = generateOrderNumber()
@@ -117,6 +144,44 @@ export async function POST(request: NextRequest) {
 
     const formattedCustomerPhone = formatPhone(customerPhone)
     const productInfo = body.items?.[0] || {}
+    
+    // 보안: 서버에서 상품 가격 검증
+    if (productInfo.productId) {
+      const { data: dbProduct, error: productError } = await supabaseAdmin
+        .from('products')
+        .select('customer_price, is_active')
+        .eq('id', productInfo.productId)
+        .single()
+      
+      if (productError || !dbProduct) {
+        return NextResponse.json({ 
+          error: '상품 정보를 찾을 수 없습니다' 
+        }, { status: 404 })
+      }
+      
+      if (!dbProduct.is_active) {
+        return NextResponse.json({ 
+          error: '현재 판매하지 않는 상품입니다' 
+        }, { status: 400 })
+      }
+      
+      // 가격 검증 (quantity 고려)
+      const expectedTotal = dbProduct.customer_price * (productInfo.quantity || 1)
+      const priceDiff = Math.abs(expectedTotal - (totalAmount + discountAmount))
+      
+      // 1원 이상 차이나면 조작 의심
+      if (priceDiff > 1) {
+        console.warn('[Price Mismatch]', {
+          productId: productInfo.productId,
+          expected: expectedTotal,
+          received: totalAmount + discountAmount,
+          diff: priceDiff
+        })
+        return NextResponse.json({ 
+          error: '가격 정보가 일치하지 않습니다. 페이지를 새로고침 후 다시 시도해주세요.' 
+        }, { status: 400 })
+      }
+    }
     
     let addressString = ''
     if (typeof deliveryAddress === 'object' && deliveryAddress) {
@@ -235,6 +300,22 @@ export async function POST(request: NextRequest) {
         })
     }
     
+    // SMS 발송
+    try {
+      const smsMessage = `[무지개꽃] 주문이 완료되었습니다.\n주문번호: ${orderNumber}\n금액: ${totalAmount.toLocaleString()}원\n배송일: ${orderData.delivery_date}`
+      
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: formattedCustomerPhone,
+          message: smsMessage
+        })
+      })
+    } catch (smsError) {
+      console.error('[SMS Error - Non-blocking]', smsError)
+    }
+    
     return NextResponse.json({ 
       success: true, 
       orderNumber,
@@ -243,10 +324,15 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Order error:', error)
+    // 보안: 상세 에러는 로그에만 기록, 클라이언트에는 일반 메시지만 전달
+    console.error('[Order Creation Error]', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    })
+    
     return NextResponse.json({ 
-      error: '주문 처리 실패',
-      details: error.message 
+      error: '주문 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
     }, { status: 500 })
   }
 }

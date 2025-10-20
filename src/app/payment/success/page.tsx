@@ -10,7 +10,7 @@ export default function PaymentSuccessPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    const confirmPayment = async () => {
+    const processPayment = async () => {
       const paymentKey = searchParams.get('paymentKey')
       const orderId = searchParams.get('orderId')
       const amount = searchParams.get('amount')
@@ -22,29 +22,71 @@ export default function PaymentSuccessPage() {
       }
 
       try {
-        const response = await fetch('/api/payment/confirm', {
+        // 1. 결제 승인 (토스 API)
+        const confirmResponse = await fetch('/api/payment/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) }),
+          body: JSON.stringify({ 
+            paymentKey, 
+            orderId, 
+            amount: Number(amount) 
+          }),
         })
 
-        const result = await response.json()
+        const confirmResult = await confirmResponse.json()
 
-        if (result.success) {
+        if (!confirmResult.success) {
+          setStatus('error')
+          setMessage(confirmResult.error || '결제 승인에 실패했습니다')
+          return
+        }
+
+        // 2. 주문 데이터 가져오기 (localStorage에서)
+        const pendingOrder = localStorage.getItem('pendingOrder')
+        if (!pendingOrder) {
+          setStatus('error')
+          setMessage('주문 정보를 찾을 수 없습니다')
+          return
+        }
+
+        const orderData = JSON.parse(pendingOrder)
+
+        // 3. 주문 생성 (DB)
+        const orderResponse = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...orderData,
+            payment_key: paymentKey,
+            transaction_id: paymentKey,
+            payment_status: 'completed',
+            status: 'paid'
+          }),
+        })
+
+        const orderResult = await orderResponse.json()
+
+        if (orderResult.success) {
+          // 주문 완료 - localStorage 정리
+          localStorage.removeItem('pendingOrder')
+          
           setStatus('success')
-          setMessage('결제가 완료되었습니다')
+          setMessage(`주문이 완료되었습니다. 주문번호: ${orderResult.orderNumber}`)
+          
+          // 3초 후 홈으로
           setTimeout(() => router.push('/'), 3000)
         } else {
           setStatus('error')
-          setMessage(result.error || '결제 승인에 실패했습니다')
+          setMessage(orderResult.error || '주문 생성에 실패했습니다')
         }
       } catch (error) {
+        console.error('Payment processing error:', error)
         setStatus('error')
         setMessage('결제 처리 중 오류가 발생했습니다')
       }
     }
 
-    confirmPayment()
+    processPayment()
   }, [searchParams, router])
 
   return (

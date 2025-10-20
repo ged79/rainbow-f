@@ -16,6 +16,7 @@ const PAYMENT_METHODS = [
   { id: 'card', name: '신용/체크카드', available: true },
   { id: 'transfer', name: '계좌이체', available: true },
   { id: 'vbank', name: '가상계좌', available: true },
+  { id: 'mobile', name: '휴대폰 소액결제', available: true },
 ]
 
 export default function PaymentModal({ 
@@ -27,48 +28,51 @@ export default function PaymentModal({
   onSuccess 
 }: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
-  const [selectedMethod, setSelectedMethod] = useState('')
+  const [selectedMethod, setSelectedMethod] = useState('card')
   const [error, setError] = useState('')
 
   const handlePayment = async () => {
-    if (!selectedMethod) {
-      setError('결제 방법을 선택해주세요')
-      return
-    }
-
     setIsProcessing(true)
     setError('')
 
     try {
       const orderId = `ORD-${Date.now()}`
       
-      // 토스 결제창 요청
-      const checkoutUrl = `https://api.tosspayments.com/v1/payments/key-in`
-      
-      const response = await fetch('/api/payment/request', {
+      // 테스트: 결제 확인 없이 주문 직접 생성
+      const pendingOrder = localStorage.getItem('pendingOrder')
+      if (!pendingOrder) {
+        setError('주문 정보를 찾을 수 없습니다')
+        setIsProcessing(false)
+        return
+      }
+
+      const orderData = JSON.parse(pendingOrder)
+
+      const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          method: selectedMethod,
-          amount: totalAmount,
-          orderId,
-          orderName: orderData.product_name || '꽃배송',
-          customerName: orderData.customer_name,
-          customerMobilePhone: orderData.customer_phone,
+          ...orderData,
+          payment_key: 'test_payment',
+          transaction_id: orderId,
+          payment_status: 'test',
+          status: 'pending'
         }),
       })
 
-      const result = await response.json()
-      
-      if (response.ok && result.checkout?.url) {
-        // 결제창으로 리다이렉트
-        window.location.href = result.checkout.url
+      const orderResult = await orderResponse.json()
+
+      if (orderResult.success) {
+        localStorage.removeItem('pendingOrder')
+        alert(`테스트 주문 완료! 주문번호: ${orderResult.orderNumber}`)
+        window.location.href = '/'
       } else {
-        setError(result.message || '결제 요청 실패')
+        setError(orderResult.error || '주문 생성 실패')
         setIsProcessing(false)
       }
+      
     } catch (err: any) {
-      setError(err.message || '결제 처리 중 오류')
+      setError('결제 처리 중 오류가 발생했습니다')
       setIsProcessing(false)
     }
   }
@@ -128,6 +132,12 @@ export default function PaymentModal({
             </label>
           ))}
         </div>
+        
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-xs text-yellow-800">
+            ⚠️ 테스트 모드: 실제 결제는 진행되지 않습니다
+          </p>
+        </div>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -145,10 +155,10 @@ export default function PaymentModal({
           </button>
           <button
             onClick={handlePayment}
-            disabled={isProcessing || !selectedMethod}
+            disabled={isProcessing}
             className="flex-1 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-300 text-white py-3 rounded-lg font-semibold"
           >
-            {isProcessing ? '처리중...' : '결제하기'}
+            {isProcessing ? '처리중...' : '결제하기 (테스트)'}
           </button>
         </div>
       </div>

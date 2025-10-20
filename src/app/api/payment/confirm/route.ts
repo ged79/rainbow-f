@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
+  // Rate limiting: 결제 확인 (IP당 분당 10회)
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+  const rateLimitKey = `payment-confirm:${clientIp}`
+  
+  if (!(await checkRateLimit(rateLimitKey))) {
+    return NextResponse.json(
+      { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    )
+  }
+  
   try {
     const { paymentKey, orderId, amount } = await request.json()
 
@@ -30,7 +44,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, payment: result })
   } catch (error: any) {
-    console.error('Payment error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    // 보안: 상세 에러는 로그에만 기록
+    console.error('[Payment Confirm Error]', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    })
+    
+    return NextResponse.json({ 
+      error: '결제 확인 중 오류가 발생했습니다.' 
+    }, { status: 500 })
   }
 }

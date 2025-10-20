@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as bcrypt from 'bcryptjs'
 import { createPublicClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rateLimit'
+import { validatePhone, validateEmail } from '@/lib/security/validation'
 
 export async function POST(request: NextRequest) {
+  // Rate limiting: 회원가입 (분당 3회)
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+  const rateLimitKey = `signup:${clientIp}`
+  
+  if (!(await checkRateLimit(rateLimitKey))) {
+    return NextResponse.json(
+      { error: '회원가입 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    )
+  }
+  
   try {
     const body = await request.json()
     const { phone, password, name, email, existingPoints, existingCoupons } = body
@@ -13,6 +28,22 @@ export async function POST(request: NextRequest) {
     if (!phone || !password || !name) {
       return NextResponse.json(
         { error: '필수 정보를 모두 입력해주세요' },
+        { status: 400 }
+      )
+    }
+    
+    // 보안: 전화번호 형식 검증
+    if (!validatePhone(phone)) {
+      return NextResponse.json(
+        { error: '올바른 전화번호 형식이 아닙니다' },
+        { status: 400 }
+      )
+    }
+    
+    // 보안: 이메일 형식 검증
+    if (email && !validateEmail(email)) {
+      return NextResponse.json(
+        { error: '올바른 이메일 형식이 아닙니다' },
         { status: 400 }
       )
     }
@@ -125,9 +156,13 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Signup error:', error)
+    console.error('[Signup Error]', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+    
     return NextResponse.json(
-      { error: error.message || 'Failed to create account' },
+      { error: '회원가입 중 오류가 발생했습니다' },
       { status: 500 }
     )
   }
