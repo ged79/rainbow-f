@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const formData = new FormData()
     formData.append('key', process.env.ALIGO_API_KEY!)
     formData.append('user_id', process.env.ALIGO_USER_ID!)
-    formData.append('sender', process.env.SMS_SENDER!)
+    formData.append('sender', process.env.ALIGO_SENDER!)
     formData.append('receiver', to.replace(/-/g, ''))
     formData.append('msg', message)
     formData.append('testmode_yn', process.env.NODE_ENV === 'development' ? 'Y' : 'N')
