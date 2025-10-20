@@ -80,6 +80,7 @@ const nextConfig = {
   // 기타 설정
   reactStrictMode: true,
   swcMinify: true,
+  output: 'standalone',
 }
 
 module.exports = nextConfig
