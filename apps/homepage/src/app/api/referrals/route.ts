@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient, handleApiError } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -10,10 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = createServiceClient()
-    
-    // Get referrals I made
-    const { data: referrals, error } = await supabase
+    const { data: referrals, error } = await supabaseAdmin
       .from('referrals')
       .select('*')
       .eq('referrer_phone', phone)
@@ -21,7 +18,6 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    // Calculate total rewards
     const totalRewards = referrals?.reduce((sum, ref) => sum + (ref.reward_amount || 0), 0) || 0
 
     return NextResponse.json({
@@ -31,11 +27,11 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    return handleApiError(error)
+    console.error('Referral query error:', error)
+    return NextResponse.json({ error: '추천 내역 조회 실패' }, { status: 500 })
   }
 }
 
-// POST: Record new referral
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -48,9 +44,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createServiceClient()
-    
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('referrals')
       .insert({
         referrer_phone: referrer_phone.replace(/-/g, ''),
@@ -70,6 +64,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    return handleApiError(error)
+    console.error('Referral creation error:', error)
+    return NextResponse.json({ error: '추천 등록 실패' }, { status: 500 })
   }
 }

@@ -12,7 +12,7 @@ export default function Footer() {
               대표: 김영아 | 사업자등록번호: 853-81-03832
             </p>
             <p className="text-sm mb-2">
-              통신판매업신고: 신고 진행중 {/* 영동군청 신고 예정 */}
+              통신판매업신고: 제 2025-충북영동-075 호
             </p>
             <p className="text-sm mb-2">
               업종: 전자상거래, 정보통신업, 소프트웨어 개발 및 공급
@@ -21,7 +21,7 @@ export default function Footer() {
               주소: 충북 영동군 영동읍 눈어치4로 4, 201
             </p>
             <p className="text-sm mb-2">
-              이메일: contact@connexus.co.kr | 전화: 010-7741-4569
+              이메일: conexus25@conexus.co.kr | 전화: 010-7741-4569
             </p>
             <p className="text-xs mt-4 text-gray-600">
               RAINBOW-F는 통신판매중개자이며, 통신판매의 당사자가 아닙니다. 

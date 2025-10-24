@@ -247,30 +247,36 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* 배송 정보 */}
+            {/* 배송 정보 - 수정된 부분 */}
             <div className="bg-neutral-50 rounded-xl p-4 mb-6">
+              <h3 className="text-sm font-semibold text-neutral-900 mb-3">배송 안내</h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <Truck className="w-5 h-5 text-neutral-600 mt-0.5" strokeWidth={1.5} />
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">전국 당일배송</p>
-                    <p className="text-xs text-neutral-500">오후 2시 이전 주문시 당일 배송</p>
+                    <p className="text-sm font-medium text-neutral-900">당일배송</p>
+                    <p className="text-xs text-neutral-500">주문 후 3~6시간 이내 배송</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Clock className="w-5 h-5 text-neutral-600 mt-0.5" strokeWidth={1.5} />
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">시간 지정 배송</p>
-                    <p className="text-xs text-neutral-500">원하는 시간에 정확히 배송</p>
+                    <p className="text-sm font-medium text-neutral-900">예약배송</p>
+                    <p className="text-xs text-neutral-500">지정 시간으로부터 3~6시간 이내 배송</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Shield className="w-5 h-5 text-neutral-600 mt-0.5" strokeWidth={1.5} />
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">100% 신선 보장</p>
-                    <p className="text-xs text-neutral-500">만족하지 않으면 100% 환불</p>
+                    <p className="text-sm font-medium text-neutral-900">최대 배송기간</p>
+                    <p className="text-xs text-neutral-500">7일 이내 배송 (예약 주문 포함)</p>
                   </div>
                 </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-neutral-200">
+                <p className="text-xs text-neutral-500">
+                  ※ 지역 및 날씨에 따라 배송시간이 다소 변동될 수 있습니다
+                </p>
               </div>
             </div>
 

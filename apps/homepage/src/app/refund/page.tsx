@@ -8,12 +8,33 @@ export default function RefundPage() {
         
         <div className="bg-white rounded-lg shadow p-8 space-y-6">
           <section>
-            <p className="text-sm text-gray-600 mb-4">최종 수정일: 2024년 10월 1일</p>
+            <p className="text-sm text-gray-600 mb-4">최종 수정일: 2025년 10월 1일</p>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
               <p className="text-amber-800 text-sm">
                 <span className="font-semibold">중요:</span> 꽃은 신선도가 중요한 상품 특성상 단순 변심에 의한 환불이 제한됩니다. 
                 주문 전 신중한 구매 결정을 부탁드립니다.
               </p>
+            </div>
+          </section>
+
+          {/* 배송 소요시간 섹션 추가 */}
+          <section>
+            <h2 className="text-xl font-semibold mb-3">배송 소요시간</h2>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">•</span>
+                  <span><span className="font-semibold">당일배송:</span> 주문 후 3~6시간 이내 배송</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">•</span>
+                  <span><span className="font-semibold">예약배송:</span> 지정 시간으로부터 3~6시간 이내 배송</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">•</span>
+                  <span><span className="font-semibold">최대 배송기간:</span> 1일 이내</span>
+                </li>
+              </ul>
             </div>
           </section>
 
@@ -23,18 +44,17 @@ export default function RefundPage() {
               <div>
                 <h3 className="font-medium mb-2">청약철회 가능 기간</h3>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>배송 예정일 <span className="font-semibold text-red-600">2일 전까지</span> 가능</li>
-                  <li>당일 배송 상품: 주문 후 <span className="font-semibold">1시간 이내</span></li>
-                  <li>예약 배송 상품: 배송일 48시간 전까지</li>
+                  <li>배송 예정일 <span className="font-semibold text-red-600">1일 전까지</span> 주문 취소 가능</li>
+                  <li>당일 배송 상품: 주문 후 <span className="font-semibold">3시간 이내</span></li>
+                  <li>예약 배송 상품: 배송일 24시간 전까지</li>
                 </ul>
               </div>
               
               <div className="bg-gray-50 p-4 rounded">
                 <p className="text-sm font-medium mb-1">취소 수수료</p>
                 <ul className="text-sm space-y-1">
-                  <li>• 배송 3일 전: 100% 환불</li>
-                  <li>• 배송 2일 전: 90% 환불</li>
-                  <li>• 배송 1일 전: 50% 환불</li>
+                  <li>• 배송 2일 전: 100% 환불</li>
+                  <li>• 배송 1일 전: 90% 환불</li>
                   <li>• 배송 당일: 환불 불가</li>
                 </ul>
               </div>
@@ -191,7 +211,7 @@ export default function RefundPage() {
               <p className="text-gray-700">운영시간: 평일 09:00 - 18:00</p>
               <p className="text-sm text-gray-600 mt-1">주말/공휴일 카카오톡 문의 가능</p>
               <p className="mt-3">
-                <span className="font-medium">이메일:</span> contact@connexus.co.kr
+                <span className="font-medium">이메일:</span> conexus25@conexus.co.kr
               </p>
             </div>
           </section>

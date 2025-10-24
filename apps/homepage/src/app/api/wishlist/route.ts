@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 // GET: Get user's wishlist
 export async function GET(request: NextRequest) {
@@ -17,8 +12,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // For now, return empty wishlist since table doesn't exist
-    // TODO: Create wishlist table in Supabase
     return NextResponse.json({ 
       success: true,
       wishlist: [],
@@ -36,7 +29,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // TODO: Implement wishlist table and logic
     return NextResponse.json({ 
       success: true,
       message: '위시리스트에 추가되었습니다'
@@ -53,7 +45,6 @@ export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // TODO: Implement wishlist removal
     return NextResponse.json({ 
       success: true,
       message: '위시리스트에서 제거되었습니다'

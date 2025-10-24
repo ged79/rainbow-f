@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 function generateCouponCode(): string {
   return `CP${Date.now().toString(36).toUpperCase()}`
@@ -17,8 +13,21 @@ function generateOrderNumber(): string {
   return `ORD-${dateStr}-${random}`
 }
 
-// GET: Order lookup - FIXED to match partial phone
+// GET: Order lookup - SECURE
 export async function GET(request: NextRequest) {
+  // Rate limiting: 조회 API (분당 20회)
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+  const rateLimitKey = `order-lookup:${clientIp}`
+  
+  if (!(await checkRateLimit(rateLimitKey))) {
+    return NextResponse.json(
+      { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    )
+  }
+  
   const { searchParams } = new URL(request.url)
   const name = searchParams.get('name')
   const phone = searchParams.get('phone')
@@ -28,7 +37,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Normalize phone for exact matching
     const phoneDigits = phone.replace(/\D/g, '')
     const phoneWithDash = phoneDigits.length === 11 
       ? `${phoneDigits.slice(0,3)}-${phoneDigits.slice(3,7)}-${phoneDigits.slice(7)}`
@@ -36,24 +44,16 @@ export async function GET(request: NextRequest) {
       ? `${phoneDigits.slice(0,3)}-${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`
       : phone
     
-    console.log(`Searching orders for: name='${name}', phone='${phoneWithDash}' or '${phoneDigits}'`)
-    
-    // Get orders with exact phone match
-    const { data: orders, error } = await supabase
+    const { data: orders, error } = await supabaseAdmin
       .from('customer_orders')
       .select('*')
       .eq('customer_name', name.trim())
       .or(`customer_phone.eq.${phoneDigits},customer_phone.eq.${phoneWithDash}`)
       .order('created_at', { ascending: false })
     
-    if (error) {
-      console.error('Order query error:', error)
-    }
+    if (error) console.error('Order query error:', error)
     
-    console.log(`Found ${orders?.length || 0} orders for ${name}/${phoneWithDash}`)
-    
-    // Get coupons with flexible phone matching
-    const { data: allCoupons } = await supabase
+    const { data: allCoupons } = await supabaseAdmin
       .from('coupons')
       .select('*')
       .is('used_at', null)
@@ -76,10 +76,9 @@ export async function GET(request: NextRequest) {
       }]
     }))
 
-    // 각 주문에 대한 리뷰 조회
     const ordersWithReviews = await Promise.all(
       ordersWithItems.map(async (order) => {
-        const { data: review } = await supabase
+        const { data: review } = await supabaseAdmin
           .from('order_reviews')
           .select('*')
           .eq('order_id', order.id)
@@ -105,15 +104,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create order - FIXED with individual updates
+// POST: Create order - SECURE
 export async function POST(request: NextRequest) {
+  // Rate limiting: 주문 생성 (IP당 분당 5회)
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown'
+  const rateLimitKey = `order-create:${clientIp}`
+  
+  if (!(await checkRateLimit(rateLimitKey))) {
+    return NextResponse.json(
+      { error: '주문 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    )
+  }
+  
   try {
     const body = await request.json()
-    console.log('=== ORDER START ===')
-    console.log('Raw body received:', JSON.stringify(body, null, 2))
-    console.log('Customer:', body.customerName || body.customer_name, body.customerPhone || body.customer_phone)
-    console.log('Discount:', body.discountAmount || body.discount_amount)
-    
     const orderNumber = generateOrderNumber()
     
     const customerPhone = body.customerPhone || body.customer_phone || ''
@@ -123,7 +130,6 @@ export async function POST(request: NextRequest) {
     const deliveryAddress = body.deliveryAddress || body.recipient_address || ''
     const totalAmount = body.totalAmount || body.total_amount || 0
     const discountAmount = body.discountAmount || body.discount_amount || 0
-    console.log('=== DISCOUNT CHECK ===', { discountAmount, usePoints: body.usePoints, totalPoints: body.totalPoints })
     
     const formatPhone = (phone: string) => {
       if (!phone) return ''
@@ -139,9 +145,46 @@ export async function POST(request: NextRequest) {
     const formattedCustomerPhone = formatPhone(customerPhone)
     const productInfo = body.items?.[0] || {}
     
+    // 보안: 서버에서 상품 가격 검증
+    if (productInfo.productId) {
+      const { data: dbProduct, error: productError } = await supabaseAdmin
+        .from('products')
+        .select('customer_price, is_active')
+        .eq('id', productInfo.productId)
+        .single()
+      
+      if (productError || !dbProduct) {
+        return NextResponse.json({ 
+          error: '상품 정보를 찾을 수 없습니다' 
+        }, { status: 404 })
+      }
+      
+      if (!dbProduct.is_active) {
+        return NextResponse.json({ 
+          error: '현재 판매하지 않는 상품입니다' 
+        }, { status: 400 })
+      }
+      
+      // 가격 검증 (quantity 고려)
+      const expectedTotal = dbProduct.customer_price * (productInfo.quantity || 1)
+      const priceDiff = Math.abs(expectedTotal - (totalAmount + discountAmount))
+      
+      // 1원 이상 차이나면 조작 의심
+      if (priceDiff > 1) {
+        console.warn('[Price Mismatch]', {
+          productId: productInfo.productId,
+          expected: expectedTotal,
+          received: totalAmount + discountAmount,
+          diff: priceDiff
+        })
+        return NextResponse.json({ 
+          error: '가격 정보가 일치하지 않습니다. 페이지를 새로고침 후 다시 시도해주세요.' 
+        }, { status: 400 })
+      }
+    }
+    
     let addressString = ''
     if (typeof deliveryAddress === 'object' && deliveryAddress) {
-      // dong에 도로명 주소가, detail에 상세주소가 저장됨
       const roadAddress = deliveryAddress.dong || ''
       const detailAddress = deliveryAddress.detail || ''
       addressString = detailAddress ? `${roadAddress} ${detailAddress}`.trim() : roadAddress
@@ -149,7 +192,6 @@ export async function POST(request: NextRequest) {
       addressString = deliveryAddress || ''
     }
     
-    // NO POINTS if discount used
     let buyerPoints = 0
     let referrerPoints = 0
     const hasReferrer = body.referrerPhone && body.referrerPhone !== customerPhone
@@ -162,8 +204,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Create order
-    const { data: order, error } = await supabase
+    const { data: order, error } = await supabaseAdmin
       .from('customer_orders')
       .insert({
         order_number: orderNumber,
@@ -191,48 +232,36 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) throw error
-    console.log('Order created:', { orderNumber, dbOrderNumber: order.order_number })
-    console.log('Order created:', { orderNumber, customer_phone: formattedCustomerPhone, discount: discountAmount })
 
-    // Process coupon deduction if discount is applied
     if (discountAmount > 0 && formattedCustomerPhone) {
-      console.log(`Processing ${discountAmount}원 coupon usage for ${formattedCustomerPhone}`)
-      
       const normalizedPhone = customerPhone.replace(/\D/g, '')
       
-      // Get ALL coupons (including welcome) with BOTH phone formats
-      const { data: coupons1 } = await supabase
+      const { data: coupons1 } = await supabaseAdmin
         .from('coupons')
         .select('*')
         .eq('customer_phone', formattedCustomerPhone)
         .is('used_at', null)
         .gte('expires_at', new Date().toISOString())
       
-      const { data: coupons2 } = await supabase
+      const { data: coupons2 } = await supabaseAdmin
         .from('coupons')
         .select('*')
         .eq('customer_phone', normalizedPhone)
         .is('used_at', null)
         .gte('expires_at', new Date().toISOString())
       
-      // Combine and deduplicate
       const allCoupons = [...(coupons1 || []), ...(coupons2 || [])]
       const uniqueCoupons = allCoupons.filter((coupon, index, self) =>
         index === self.findIndex(c => c.id === coupon.id)
-      ).sort((a, b) => new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime())  // Use coupons expiring first
-      
-      console.log(`Found ${uniqueCoupons.length} available coupons for ${formattedCustomerPhone}`)
+      ).sort((a, b) => new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime())
       
       if (uniqueCoupons.length > 0) {
         let remaining = discountAmount
-        let successCount = 0
-        const usedCoupons = []
         
-        // Use coupons up to discount amount
         for (const coupon of uniqueCoupons) {
           if (remaining <= 0) break
           
-          const { error: updateError } = await supabase
+          await supabaseAdmin
             .from('coupons')
             .update({ 
               used_at: new Date().toISOString(), 
@@ -240,28 +269,13 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', coupon.id)
           
-          if (!updateError) {
-            const usedAmount = Math.min(coupon.amount, remaining)
-            remaining -= coupon.amount
-            successCount++
-            usedCoupons.push(`${coupon.code}(${coupon.type}:${coupon.amount}원)`)
-            console.log(`✓ Used coupon ${coupon.code} (${coupon.type}): ${coupon.amount}원`)
-          } else {
-            console.error(`✗ Failed to use coupon ${coupon.code}:`, updateError)
-          }
+          remaining -= coupon.amount
         }
-        
-        console.log(`Used ${successCount} coupons: [${usedCoupons.join(', ')}], Remaining: ${remaining}원`)
-      } else {
-        console.log('⚠️ No available coupons found despite discount amount!')
       }
     }
     
-    console.log('포인트 적립 조건:', { discountAmount, buyerPoints, hasReferrer, formattedCustomerPhone })
-    
-    // Create points only if no discount
     if (buyerPoints > 0) {
-      const result = await supabase
+      await supabaseAdmin
         .from('coupons')
         .insert({
           code: generateCouponCode(),
@@ -271,11 +285,10 @@ export async function POST(request: NextRequest) {
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           order_id: order.id
         })
-      console.log('구매 포인트 적립:', formattedCustomerPhone, buyerPoints, result.error || '성공')
     }
 
     if (referrerPoints > 0 && hasReferrer) {
-      const result = await supabase
+      await supabaseAdmin
         .from('coupons')
         .insert({
           code: generateCouponCode(),
@@ -285,10 +298,23 @@ export async function POST(request: NextRequest) {
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           order_id: order.id
         })
-      console.log('추천 포인트 적립:', formatPhone(body.referrerPhone), referrerPoints, result.error || '성공')
     }
-
-    console.log('=== ORDER END ===')
+    
+    // SMS 발송
+    try {
+      const smsMessage = `[무지개꽃] 주문이 완료되었습니다.\n주문번호: ${orderNumber}\n금액: ${totalAmount.toLocaleString()}원\n배송일: ${body.deliveryDate || body.delivery_date}`
+      
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: formattedCustomerPhone,
+          message: smsMessage
+        })
+      })
+    } catch (smsError) {
+      console.error('[SMS Error - Non-blocking]', smsError)
+    }
     
     return NextResponse.json({ 
       success: true, 
@@ -298,10 +324,15 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Order error:', error)
+    // 보안: 상세 에러는 로그에만 기록, 클라이언트에는 일반 메시지만 전달
+    console.error('[Order Creation Error]', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    })
+    
     return NextResponse.json({ 
-      error: '주문 처리 실패',
-      details: error.message 
+      error: '주문 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
     }, { status: 500 })
   }
 }

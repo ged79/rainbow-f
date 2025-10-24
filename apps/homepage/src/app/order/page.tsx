@@ -1,5 +1,6 @@
 'use client'
 
+import DeliveryExamples from '../../components/DeliveryExamples'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import EmotionalNavbar from '../../components/EmotionalNavbar'
@@ -7,8 +8,7 @@ import PaymentModal from '../../components/PaymentModal'
 import ProductImageGallery from '../../components/ProductImageGallery'
 import Button from '../../components/ui/Button'
 import { Heart, ShoppingCart, Minus, Plus, MapPin, Calendar, Clock, Gift } from 'lucide-react'
-import DeliveryExamples from '../../components/DeliveryExamples'
-import { getProductFromDB, getRecommendedProducts, getProduct } from '../../lib/products'
+import { getProductFromDB, getProduct } from '../../lib/products'
 import { getProductById } from '../../services/productService'
 import type { ProductType, CreateOrderInput, HomepageProduct } from '../../types'
 
@@ -81,7 +81,6 @@ const OrderPage = () => {
   const [product, setProduct] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isWishlisted, setIsWishlisted] = useState(false)
-  const [recommendedProducts, setRecommendedProducts] = useState<HomepageProduct[]>([])
   const [productReviews, setProductReviews] = useState<any[]>([])  // 상품 리뷰
   const searchParams = useSearchParams()
   
@@ -171,61 +170,7 @@ const OrderPage = () => {
     }
   }
 
-  // 상품 종류별 리본 문구
-  const getRibbonMessages = (productType: ProductType) => {
-    switch(productType) {
-      case '근조화환':
-        return [
-          '삼가 고인의 명복을 빕니다',
-          '깊은 애도를 표합니다',
-          '그리운 마음을 전합니다',
-          '편안히 잠드소서'
-        ]
-      case '축하화환':
-        return [
-          '개업을 축하드립니다',
-          '번창하시길 바랍니다',
-          '대박나세요',
-          '축하합니다'
-        ]
-      case '꽃다발':
-        return [
-          '사랑합니다',
-          '감사합니다',
-          '축하합니다',
-          '행복하세요'
-        ]
-      case '꽃바구니':
-        return [
-          '빠른 쾌유를 바랍니다',
-          '건강하세요',
-          '감사합니다',
-          '축하합니다'
-        ]
-      case '관엽화분':
-        return [
-          '새로운 시작을 응원합니다',
-          '번창하시길 바랍니다',
-          '행운을 빕니다',
-          '축하합니다'
-        ]
-      case '서양란':
-      case '동양란':
-        return [
-          '축하합니다',
-          '감사합니다',
-          '번영하시길 바랍니다',
-          '사랑합니다'
-        ]
-      default:
-        return [
-          '축하합니다',
-          '감사합니다',
-          '사랑합니다',
-          '행복하세요'
-        ]
-    }
-  }
+
   
   // 주소 관련 state
   const [scriptLoaded, setScriptLoaded] = useState(false)
@@ -295,9 +240,6 @@ const OrderPage = () => {
           setProduct(orderProduct)
           setQuantity(orderProduct.quantity || 1)
           
-          // Get recommended products
-          const recommendations = await getRecommendedProducts(orderProduct)
-          setRecommendedProducts(recommendations)
           
           setOrderData(prev => ({
             ...prev,
@@ -342,10 +284,7 @@ const OrderPage = () => {
           if (foundProduct) {
             setProduct(foundProduct)
             
-            // Get recommended products
-            const recommendations = await getRecommendedProducts(foundProduct)
-            setRecommendedProducts(recommendations)
-            
+          
             setOrderData(prev => ({
               ...prev,
               product_name: foundProduct.name,
@@ -616,8 +555,47 @@ const OrderPage = () => {
                     </div>
                   </div>
                 )}
+                
 
-            {/* 수량 선택 */}
+                {/* 배송 안내 */}
+                <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                  <div className="text-blue-700 font-semibold mb-3">
+                    📦 배송 안내
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-blue-600 text-lg">🚚</span>
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">당일배송</p>
+                        <p className="text-sm text-blue-700">주문 후 3~6시간 이내 배송</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-blue-600 text-lg">⏰</span>
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">예약배송</p>
+                        <p className="text-sm text-blue-700">지정 시간으로부터 3~6시간 이내 배송</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-blue-600 text-lg">📅</span>
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">최대 배송기간</p>
+                        <p className="text-sm text-blue-700">7일 이내 배송 (예약 주문 포함)</p>
+                      </div>
+                    </div>
+                    <div className="pt-3 border-t border-blue-200">
+                      <p className="text-sm text-blue-600">
+                        ※ 지역 및 날씨에 따라 배송시간이 다소 변동될 수 있습니다
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+{/* 수량 선택 */}
+                
+
+{/* 수량 선택 */}
                 <div className="flex items-center justify-between py-4 mb-4">
                   <span className="text-gray-700 font-medium">수량</span>
                   <div className="flex items-center space-x-3">
@@ -706,9 +684,11 @@ const OrderPage = () => {
           )}
         </div>
         
-        {/* 실제 배송 사례 */}
-        <DeliveryExamples category={product?.category_1} />
-      </div>
+{/* 배송완료 상품 갤러리 - PC */}
+<div className="max-w-6xl mx-auto px-4 py-8">
+  <DeliveryExamples category={product?.category} />
+</div>
+      </div>  {/* PC 레이아웃 닫기 */}
 
       {/* 모바일 레이아웃 - 기존 유지 */}
       <div className="lg:hidden max-w-4xl mx-auto px-4 py-6 space-y-6 mt-4">
@@ -745,6 +725,40 @@ const OrderPage = () => {
                 </div>
               </div>
             )}
+            {/* 배송 안내 */}
+            <div className="bg-blue-50 rounded-lg p-3 mb-3">
+              <div className="text-blue-700 text-xs font-semibold mb-2">
+                📦 배송 안내
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-600 text-xs">🚚</span>
+                  <div>
+                    <p className="text-xs font-medium text-blue-900">당일배송</p>
+                    <p className="text-xs text-blue-700">주문 후 3~6시간 이내 배송</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-600 text-xs">⏰</span>
+                  <div>
+                    <p className="text-xs font-medium text-blue-900">예약배송</p>
+                    <p className="text-xs text-blue-700">지정 시간으로부터 3~6시간 이내 배송</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-600 text-xs">📅</span>
+                  <div>
+                    <p className="text-xs font-medium text-blue-900">최대 배송기간</p>
+                    <p className="text-xs text-blue-700">7일 이내 배송 (예약 주문 포함)</p>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-blue-200">
+                  <p className="text-xs text-blue-600">
+                    ※ 지역 및 날씨에 따라 배송시간이 다소 변동될 수 있습니다
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -779,8 +793,10 @@ const OrderPage = () => {
           </div>
         </div>
 
-        {/* 실제 배송 사례 - 모바일 */}
-        <DeliveryExamples category={product?.category_1} />
+ {/* 배송완료 상품 갤러리 - 모바일 */}
+<div className="bg-white shadow-sm p-6">
+  <DeliveryExamples category={product?.category} />
+</div>
         
         {/* 리뷰 섹션 - 모바일 */}
         {productReviews.length > 0 && (

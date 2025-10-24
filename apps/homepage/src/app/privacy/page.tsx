@@ -114,7 +114,7 @@ export default function PrivacyPage() {
               <p><span className="font-medium">책임자:</span> 김영아</p>
               <p><span className="font-medium">직책:</span> 대표</p>
               <p><span className="font-medium">연락처:</span> 010-7741-4569</p>
-              <p><span className="font-medium">이메일:</span> contact@connexus.co.kr</p>
+              <p><span className="font-medium">이메일:</span> lunggal@naver.com</p>
             </div>
           </section>
 
