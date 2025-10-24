@@ -14,15 +14,17 @@ export default function DeliveryExamples({ category }: DeliveryExampleProps) {
     loadDeliveryExamples()
   }, [category])
   
-  const loadDeliveryExamples = async () => {
-    try {
-      const response = await fetch(`/api/delivery-examples${category ? `?category=${category}` : ''}`)
-      const data = await response.json()
-      setExamples(data)
-    } catch (error) {
-      console.error('Failed to load:', error)
-    }
+const loadDeliveryExamples = async () => {
+  try {
+    console.log('Loading examples for category:', category)
+    const response = await fetch(`/api/delivery-examples${category ? `?category=${category}` : ''}`)
+    const data = await response.json()
+    console.log('Loaded examples:', data)
+    setExamples(data)
+  } catch (error) {
+    console.error('Failed to load:', error)
   }
+}
   
   if (examples.length === 0) return null
   

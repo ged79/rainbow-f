@@ -35,6 +35,14 @@ function SignupForm() {
   const [existingPoints, setExistingPoints] = useState(0)
   const [existingCoupons, setExistingCoupons] = useState<any[]>([])
   const [isCheckingPoints, setIsCheckingPoints] = useState(false)
+  
+  // SMS 인증 관련 state
+  const [verificationCode, setVerificationCode] = useState('')
+  const [sentCode, setSentCode] = useState('')
+  const [isCodeSent, setIsCodeSent] = useState(false)
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false)
+  const [isSendingCode, setIsSendingCode] = useState(false)
+  const [countdown, setCountdown] = useState(0)
 
   const formatPhoneNumber = (value: string) => {
     const numbers = value.replace(/[^\d]/g, '')
@@ -81,9 +89,81 @@ function SignupForm() {
     const formatted = formatPhoneNumber(value)
     setFormData({ ...formData, phone: formatted })
     
+    // 전화번호가 변경되면 인증 초기화
+    setIsPhoneVerified(false)
+    setIsCodeSent(false)
+    setVerificationCode('')
+    
     // 전화번호가 완성되면 포인트 조회
     if (formatted.length === 13) {
       fetchExistingPoints(formatted)
+    }
+  }
+  
+  // 타이머 설정
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [countdown])
+  
+  // 인증번호 전송
+  const sendVerificationCode = async () => {
+    if (!formData.phone || formData.phone.length !== 13) {
+      alert('전화번호를 정확히 입력해주세요')
+      return
+    }
+    
+    setIsSendingCode(true)
+    
+    // 6자리 랜덤 코드 생성
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    setSentCode(code)
+    
+    try {
+      const response = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: formData.phone,
+          message: `[무지개꽃] 인증번호: ${code}\n3분 이내에 입력해주세요.`
+        })
+      })
+      
+      if (response.ok) {
+        setIsCodeSent(true)
+        setCountdown(180) // 3분 타이머
+        alert('인증번호가 전송되었습니다')
+      } else {
+        alert('인증번호 전송에 실패했습니다')
+      }
+    } catch (error) {
+      console.error('SMS 전송 오류:', error)
+      alert('인증번호 전송에 실패했습니다')
+    } finally {
+      setIsSendingCode(false)
+    }
+  }
+  
+  // 인증번호 확인
+  const verifyCode = () => {
+    if (!verificationCode) {
+      alert('인증번호를 입력해주세요')
+      return
+    }
+    
+    if (countdown === 0) {
+      alert('인증번호가 만료되었습니다. 다시 전송해주세요')
+      return
+    }
+    
+    if (verificationCode === sentCode) {
+      setIsPhoneVerified(true)
+      setCountdown(0)
+      alert('전화번호 인증이 완료되었습니다')
+    } else {
+      alert('인증번호가 일치하지 않습니다')
     }
   }
 

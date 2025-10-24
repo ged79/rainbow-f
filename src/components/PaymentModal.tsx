@@ -48,11 +48,38 @@ export default function PaymentModal({
 
       const orderData = JSON.parse(pendingOrder)
 
+      // items 배열 생성
+      const items = [{
+        productId: orderData.product_id,
+        productName: orderData.product_name,
+        productImage: orderData.product_image,
+        price: orderData.product_price,
+        quantity: orderData.product_quantity || 1
+      }]
+
+      console.log('[PaymentModal] Sending order:', {
+        product_name: orderData.product_name,
+        product_image: orderData.product_image,
+        items: items
+      })
+
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...orderData,
+          items: items,
+          customerPhone: orderData.customer_phone,
+          customerName: orderData.customer_name,
+          recipientPhone: orderData.recipient_phone,
+          recipientName: orderData.recipient_name,
+          deliveryAddress: orderData.recipient_address,
+          deliveryDate: orderData.delivery_date,
+          deliveryTime: orderData.delivery_time,
+          totalAmount: orderData.total_amount,
+          discountAmount: orderData.discount_amount || 0,
+          ribbonMessage: orderData.ribbon_text,
+          message: orderData.special_instructions,
           payment_key: 'test_payment',
           transaction_id: orderId,
           payment_status: 'test',
@@ -106,6 +133,16 @@ export default function PaymentModal({
           ) : (
             <p className="text-2xl font-bold text-pink-600">{totalAmount.toLocaleString()}원</p>
           )}
+        </div>
+
+        {/* 배송 정보 */}
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-900 font-medium mb-1">📦 배송 정보</p>
+          <p className="text-xs text-blue-700">
+            {orderData.delivery_time === '즉시배송' 
+              ? '주문 후 3~6시간 내 배송 예정' 
+              : `${orderData.delivery_date} ${orderData.delivery_time} 기준 3~6시간 내 배송`}
+          </p>
         </div>
 
         <div className="space-y-2 mb-4">
