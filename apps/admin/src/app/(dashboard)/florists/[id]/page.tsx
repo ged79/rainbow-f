@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { formatCurrency, formatDate } from '@flower/shared/utils'
-import { PRODUCT_CATEGORIES } from '@flower/shared/constants'
+import { formatCurrency, formatDate } from '@/shared/utils'
+import { PRODUCT_CATEGORIES } from '@/shared/constants'
 import { ArrowLeft, MapPin, Phone, Mail, Plus } from 'lucide-react'
 
 interface PageProps {
@@ -118,14 +118,14 @@ export default async function FloristDetailPage({ params }: PageProps) {
         {!deliveryAreas || deliveryAreas.length === 0 ? (
           <p className="text-gray-500 text-center py-8">배달 지역이 설정되지 않았습니다</p>
         ) : (
-          areas.map(area => {
+          areas.map((area, index) => {
             const areaInfo = deliveryAreas?.find(d => d.area_name === area)
             const areaPricing = productPricing?.filter(p => p.area_name === area) || []
             
             return (
-              <div key={area} className="mb-6 border rounded-lg p-4">
+              <div key={`${area}-${index}`} className="mb-6 border rounded-lg p-4">
                 <h3 className="font-medium text-gray-900 mb-3">
-                  {area} 
+                  {String(area)} 
                   <span className="ml-2 text-sm text-gray-500">
                     (최소주문: {formatCurrency(areaInfo?.min_amount || 50000)})
                   </span>

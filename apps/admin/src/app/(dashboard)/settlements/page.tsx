@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatCurrency, formatDate } from '@flower/shared/utils'
-import type { SettlementWithStore } from '@flower/shared/types'
+import { formatCurrency, formatDate } from '@/shared/utils'
+import type { SettlementWithStore } from '@/shared/types'
 import { 
   DollarSign, 
   Calendar, 
@@ -61,7 +61,7 @@ export default function SettlementsPage() {
     
     setProcessing(settlementId)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await (supabase.auth as any).getUser()
       
       const { data, error } = await supabase.rpc('process_settlement', {
         p_settlement_id: settlementId,

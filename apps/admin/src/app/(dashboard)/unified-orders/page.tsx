@@ -11,8 +11,8 @@ import {
   homepageToUnifiedOrder,
   clientToUnifiedOrder,
   checkDeliveryStatus
-} from '@flower/shared/utils'
-import { UnifiedOrder } from '@flower/shared/types'
+} from '@/shared/utils'
+import { UnifiedOrder } from '@/shared/types'
 import AdminDeliveryCompleteModal from '@/components/AdminDeliveryCompleteModal'
 import toast from 'react-hot-toast'
 import { 
@@ -179,7 +179,7 @@ export default function UnifiedOrdersPage() {
   const stats = {
     total: filteredOrders.length,
     pending: filteredOrders.filter(o => o.status === 'pending').length,
-    accepted: filteredOrders.filter(o => o.status === 'accepted' || o.status === 'assigned').length,
+    accepted: filteredOrders.filter(o => o.status === 'accepted' || (o as any).status === 'assigned').length,
     overdue: filteredOrders.filter(o => checkDeliveryStatus(o) === 'overdue').length,
     client: filteredOrders.filter(o => o.source === 'client').length,
     homepage: filteredOrders.filter(o => o.source === 'homepage').length,
@@ -321,7 +321,7 @@ export default function UnifiedOrdersPage() {
                     <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                       order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                       order.status === 'accepted' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'assigned' ? 'bg-indigo-100 text-indigo-700' :
+                      (order as any).status === 'assigned' ? 'bg-indigo-100 text-indigo-700' :
                       order.status === 'preparing' ? 'bg-purple-100 text-purple-700' :
                       order.status === 'delivering' ? 'bg-orange-100 text-orange-700' :
                       order.status === 'completed' ? 'bg-green-100 text-green-700' :
@@ -329,7 +329,7 @@ export default function UnifiedOrdersPage() {
                     }`}>
                       {order.status === 'pending' ? '대기' :
                        order.status === 'accepted' ? '수락' :
-                       order.status === 'assigned' ? '배정' :
+                       (order as any).status === 'assigned' ? '배정' :
                        order.status === 'preparing' ? '준비' :
                        order.status === 'delivering' ? '배송' :
                        order.status === 'completed' ? '완료' : order.status}
@@ -340,7 +340,7 @@ export default function UnifiedOrdersPage() {
                     <div className="text-sm">
                       <Link href={order.stores.sender?.id ? `/florists/${order.stores.sender.id}` : '#'}>
                         <p className="font-medium hover:text-blue-600 cursor-pointer">
-                          {order.stores.sender?.business_name || order.stores.sender?.name || '홈페이지'}
+                          {order.stores.sender?.business_name || (order.stores.sender as any)?.name || '홈페이지'}
                         </p>
                       </Link>
                       {order.stores.receiver && (
@@ -348,7 +348,7 @@ export default function UnifiedOrdersPage() {
                           <p className="text-xs text-gray-500">↓</p>
                           <Link href={`/florists/${order.stores.receiver.id || order.stores.receiver}`}>
                             <p className="text-green-600 font-medium hover:text-green-700 cursor-pointer">
-                              {order.stores.receiver.business_name || order.stores.receiver.name || order.stores.receiver}
+                              {order.stores.receiver.business_name || (order.stores.receiver as any).name || order.stores.receiver}
                             </p>
                           </Link>
                         </>
@@ -420,7 +420,7 @@ export default function UnifiedOrdersPage() {
                           배정
                         </button>
                       )}
-                      {(order.status === 'accepted' || order.status === 'assigned' || order.status === 'preparing' || order.status === 'delivering') && (
+                      {(order.status === 'accepted' || (order as any).status === 'assigned' || order.status === 'preparing' || order.status === 'delivering') && (
                         <button
                           className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 flex items-center gap-1"
                           onClick={() => setDeliveryCompleteOrder(order)}

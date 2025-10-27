@@ -14,7 +14,7 @@ import {
   Users,
   DollarSign
 } from 'lucide-react'
-import { formatCurrency, homepageToUnifiedOrder, clientToUnifiedOrder } from '@flower/shared/utils'
+import { formatCurrency, homepageToUnifiedOrder, clientToUnifiedOrder } from '@/shared/utils'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -34,7 +34,7 @@ interface DashboardMetrics {
 interface ProblemOrder {
   id: string
   order_number: string
-  source: 'homepage' | 'client'
+  source: 'homepage' | 'client' | 'funeral'
   type: 'unassigned' | 'waiting' | 'delayed'
   duration: number
   store_name?: string

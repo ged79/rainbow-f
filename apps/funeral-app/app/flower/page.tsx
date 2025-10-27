@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Phone } from 'lucide-react'
@@ -32,7 +33,7 @@ const flowerProducts: FlowerProduct[] = [
   }
 ]
 
-export default function FlowerPage() {
+function FlowerContent() {
   const [selectedProduct, setSelectedProduct] = useState<FlowerProduct | null>(null)
   const [orderData, setOrderData] = useState({
     sender_name: '',
@@ -54,7 +55,6 @@ export default function FlowerPage() {
   const roomId = searchParams.get('room')
 
   useEffect(() => {
-    // sessionStorage에서 부고 데이터 가져오기
     const storedData = sessionStorage.getItem('obituaryData')
     if (storedData) {
       const data = JSON.parse(storedData)
@@ -80,7 +80,6 @@ export default function FlowerPage() {
     setIsSubmitting(true)
     
     try {
-      // localStorage에 주문 저장
       const orders = JSON.parse(localStorage.getItem('flower_orders') || '[]')
       const newOrder = {
         id: Date.now().toString(),
@@ -102,7 +101,7 @@ export default function FlowerPage() {
           ? orderData.customer_phone
           : orderData.sender_phone,
         payment_method: orderData.payment_method,
-        delivery_address: '영동병원장례식장 특실 5빈소 (5층)',
+        delivery_address: `영동병원장례식장 ${announcementData?.schedule?.room || '특실 5빈소 (5층)'}`,
         created_at: new Date().toISOString(),
         status: 'pending'
       }
@@ -112,7 +111,6 @@ export default function FlowerPage() {
       
       alert('주문이 성공적으로 접수되었습니다!')
       setSelectedProduct(null)
-      // 폼 초기화
       setOrderData({
         sender_name: '',
         sender_phone: '',
@@ -136,14 +134,12 @@ export default function FlowerPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
       <div className="bg-slate-700 text-white text-center py-4">
         <div className="text-xs mb-1 text-slate-300">의료법인 조윤의료재단</div>
         <h1 className="text-lg font-semibold">영동병원장례식장</h1>
       </div>
       
       <div className="max-w-2xl mx-auto bg-white min-h-screen">
-        {/* 상품 목록 */}
         <div className="p-6 h-screen flex flex-col">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">근조화환</h2>
@@ -211,7 +207,6 @@ export default function FlowerPage() {
         </div>
       </div>
 
-      {/* 주문 모달 */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg w-full max-w-md h-[90vh] overflow-y-auto">
@@ -219,7 +214,6 @@ export default function FlowerPage() {
               <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">영동병원장례식장</h3>
               
               <form onSubmit={submitOrder} className="space-y-3">
-                {/* 주문자 카드 */}
                 <div className="bg-gray-50 p-3 rounded-lg border">
                   <h4 className="font-medium text-gray-900 mb-2">주문자</h4>
                   <div className="space-y-2">
@@ -242,7 +236,6 @@ export default function FlowerPage() {
                   </div>
                 </div>
 
-                {/* 배송지/상품정보 카드 */}
                 <div className="bg-gray-50 p-3 rounded-lg border">
                   <h4 className="font-medium text-gray-900 mb-2">배송지/상품정보</h4>
                   
@@ -338,7 +331,6 @@ export default function FlowerPage() {
                   </div>
                 </div>
 
-                {/* 결제 카드 */}
                 <div className="bg-gray-50 p-3 rounded-lg border">
                   <h4 className="font-medium text-gray-900 mb-2">결제</h4>
                   
@@ -401,7 +393,6 @@ export default function FlowerPage() {
                   </div>
                 </div>
                 
-                {/* 약관 동의 */}
                 <div className="space-y-1">
                   <label className="flex items-center text-sm">
                     <input type="checkbox" className="mr-2" required />
@@ -448,5 +439,13 @@ export default function FlowerPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function FlowerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <FlowerContent />
+    </Suspense>
   )
 }

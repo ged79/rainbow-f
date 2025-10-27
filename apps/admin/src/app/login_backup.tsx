@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
 
     try {
       // 1. Supabase Auth 로그인
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await (supabase.auth as any).signInWithPassword({
         email,
         password
       })
@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
         .single()
 
       if (adminError || !adminUser) {
-        await supabase.auth.signOut()
+        await (supabase.auth as any).signOut()
         throw new Error('관리자 권한이 없습니다')
       }
 

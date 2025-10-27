@@ -84,6 +84,12 @@ const OrderPage = () => {
   const [productReviews, setProductReviews] = useState<any[]>([])  // 상품 리뷰
   const searchParams = useSearchParams()
   
+  // funeral-app에서 전달된 파라미터 확인
+  const autoOrder = searchParams.get('autoOrder') === 'true'
+  const isFuneral = searchParams.get('funeral') === 'true'
+  const funeralRoom = searchParams.get('room')
+  const deceasedName = searchParams.get('deceased')
+  
   // 상품명에서 상품 타입 추출
   const getProductType = (productName: string): ProductType => {
     if (productName.includes('근조') || productName.includes('장례')) return '근조화환'
@@ -284,13 +290,26 @@ const OrderPage = () => {
           if (foundProduct) {
             setProduct(foundProduct)
             
-          
-            setOrderData(prev => ({
-              ...prev,
+            // funeral 정보 적용
+            const productType = getProductType(foundProduct.name)
+            const initialOrderData: any = {
+              ...orderData,
               product_name: foundProduct.name,
               product_price: foundProduct.price,
-              product_type: getProductType(foundProduct.name)
-            }))
+              product_type: productType
+            }
+            
+            // funeral-app에서 온 경우 추가 정보 설정
+            if (isFuneral && deceasedName) {
+              initialOrderData.recipient_name = deceasedName
+              initialOrderData.special_instructions = funeralRoom ? `${funeralRoom} 배송` : ''
+              // 근조화환 리본 문구 기본값
+              if (productType === '근조화환') {
+                initialOrderData.ribbon_text = '삼가 고인의 명복을 빕니다'
+              }
+            }
+            
+            setOrderData(initialOrderData)
             
             // 상품 리뷰 가져오기
             fetchProductReviews(foundProduct.name)
@@ -308,6 +327,29 @@ const OrderPage = () => {
     
     loadProduct()
   }, [searchParams])
+  
+  // autoOrder 파라미터가 있으면 상품 로드 후 자동으로 결제 모달 열기
+  useEffect(() => {
+    if (autoOrder && product && !isLoading) {
+      // pendingOrder 데이터 미리 생성
+      const pendingOrderData = {
+        ...orderData,
+        product_id: product.id,
+        product_image: product.image_url || product.image || '/placeholder.jpg',
+        product_quantity: quantity,
+        product_price: product.price,
+        product_name: product.name,
+        total_amount: product.price * quantity,
+        discount_amount: 0
+      }
+      localStorage.setItem('pendingOrder', JSON.stringify(pendingOrderData))
+      
+      // 바로 결제 모달 열기
+      setTimeout(() => {
+        setShowPaymentModal(true)
+      }, 300)
+    }
+  }, [autoOrder, product, isLoading, orderData, quantity])
   
   // Daum Postcode script 로드
   useEffect(() => {
@@ -354,6 +396,10 @@ const OrderPage = () => {
   }
 
   const handleOrder = async () => {
+    if (!product || !product.name) {
+      alert('상품 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
     if (!orderData.customer_name || !orderData.customer_phone) {
       alert('주문자 정보를 입력해주세요.')
       return
@@ -392,6 +438,30 @@ const OrderPage = () => {
     }
     
     console.log('Order submitted with discount:', discountAmount, 'usePoints:', usePoints)
+    
+const pendingOrderData = {
+  ...orderData,
+  recipient_address: {
+    ...orderData.recipient_address,
+    detail: detailAddress
+  },
+  product_id: product.id,
+  product_image: product.image_url || product.image || '/placeholder.jpg',
+  product_quantity: quantity,
+  product_price: product.price,
+  product_name: product.name,
+  total_amount: product.price * quantity - discountAmount,
+  discount_amount: discountAmount,
+  referrerPhone: referrerPhone
+}
+
+console.log('[DEBUG pendingOrder]', {
+  product_name: product.name,
+  product_image: product.image_url || product.image,
+  product_id: product.id
+})
+    
+    localStorage.setItem('pendingOrder', JSON.stringify(pendingOrderData))
     setShowPaymentModal(true)
   }
   
@@ -428,15 +498,18 @@ const OrderPage = () => {
       items: [{
         productId: product.id,
         productName: product.name,
-        productImage: product.image,
+        productImage: product.image_url || product.image || '/placeholder.jpg',
         price: product.price,
         quantity: quantity
       }]
     }
     
-    console.log('Final order data being sent:', {
+    console.log('[DEBUG finalOrderData]', {
       customer_phone: finalOrderData.customer_phone,
-      discount_amount: finalOrderData.discount_amount
+      discount_amount: finalOrderData.discount_amount,
+      items: finalOrderData.items,
+      product_name_from_items: finalOrderData.items[0]?.productName,
+      product_image_from_items: finalOrderData.items[0]?.productImage
     })
     
     try {
@@ -466,6 +539,18 @@ const OrderPage = () => {
   }
   
   if (isLoading) {
+    // funeral autoOrder일 때는 로딩화면도 숨김
+    if (autoOrder) {
+      return (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <h2 className="text-xl text-gray-600">결제 준비중...</h2>
+          </div>
+        </div>
+      )
+    }
+    
     return (
       <div className="min-h-screen bg-gray-50">
         <EmotionalNavbar showCategories={true} fixed={true} />
@@ -506,10 +591,13 @@ const OrderPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <EmotionalNavbar showCategories={true} fixed={true} />
+      {!autoOrder && <EmotionalNavbar showCategories={true} fixed={true} />}
       
-      <div className="pt-20 border-b-2 border-green-600"></div>
+      {!autoOrder && <div className="pt-20 border-b-2 border-green-600"></div>}
 
+      {/* autoOrder일 때는 본문 숨김 */}
+      {!autoOrder && (
+        <>
       {/* PC 레이아웃 */}
       <div className="hidden lg:block">
         <div className="max-w-6xl mx-auto px-4 py-8">
@@ -581,7 +669,7 @@ const OrderPage = () => {
                       <span className="text-blue-600 text-lg">📅</span>
                       <div>
                         <p className="text-sm font-medium text-blue-900">최대 배송기간</p>
-                        <p className="text-sm text-blue-700">7일 이내 배송 (예약 주문 포함)</p>
+                        <p className="text-sm text-blue-700">1일 이내 배송 (예약 주문 시점으로부터 1일이내)</p>
                       </div>
                     </div>
                     <div className="pt-3 border-t border-blue-200">
@@ -749,7 +837,7 @@ const OrderPage = () => {
                   <span className="text-blue-600 text-xs">📅</span>
                   <div>
                     <p className="text-xs font-medium text-blue-900">최대 배송기간</p>
-                    <p className="text-xs text-blue-700">7일 이내 배송 (예약 주문 포함)</p>
+                    <p className="text-xs text-blue-700">1일 이내 배송 (예약 주문 시점으로부터 1일이내)</p>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-blue-200">
@@ -1075,6 +1163,10 @@ const OrderPage = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* autoOrder 조건부 렌더링 닫기 */}
+      </>
       )}
       
       {/* Payment Modal */}

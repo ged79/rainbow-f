@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatCurrency, formatDate } from '@flower/shared/utils'
-import { BUSINESS_RULES } from '@flower/shared/constants'
-import type { Settlement, Store } from '@flower/shared/types'
+import { formatCurrency, formatDate } from '@/shared/utils'
+import { BUSINESS_RULES } from '@/shared/constants'
+import type { Settlement, Store } from '@/shared/types'
 import toast from 'react-hot-toast'
 import { 
   DollarSign, 
@@ -70,7 +70,7 @@ export default function SettlementsPage() {
         .order('business_name')
 
       if (error) throw error
-      setStores(data || [])
+      setStores(data as any || [])
     } catch (error) {
       console.error('Failed to load stores:', error)
     }

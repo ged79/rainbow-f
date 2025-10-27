@@ -16,7 +16,7 @@ export default function DebugPage() {
       const results: any = {}
       
       // 1. Check auth
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await (supabase.auth as any).getUser()
       results.auth = { user: user?.email, error: authError }
       
       // 2. Check admin_users table

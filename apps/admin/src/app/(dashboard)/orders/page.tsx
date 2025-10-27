@@ -10,8 +10,8 @@ import {
   formatPhone,
   homepageToUnifiedOrder,
   clientToUnifiedOrder
-} from '@flower/shared/utils'
-import { UnifiedOrder } from '@flower/shared/types'
+} from '@/shared/utils'
+import { UnifiedOrder } from '@/shared/types'
 import { 
   CheckCircle, 
   Package, 
@@ -131,7 +131,7 @@ export default function CompletedOrdersPage() {
   const stats = {
     total: filteredOrders.length,
     today: filteredOrders.filter(o => {
-      const completed = new Date(o.completion?.completed_at || o.updated_at)
+      const completed = new Date((o as any).completion?.completed_at || o.updated_at)
       const today = new Date()
       return completed.toDateString() === today.toDateString()
     }).length,

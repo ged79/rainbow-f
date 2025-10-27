@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatCurrency, formatDate, calculateCommission } from '@flower/shared/utils'
-import type { Order, Store } from '@flower/shared/types'
+import { formatCurrency, formatDate, calculateCommission } from '@/shared/utils'
+import type { Order, Store } from '@/shared/types'
 import toast from 'react-hot-toast'
 import { 
   TrendingUp,
@@ -82,8 +82,7 @@ export default function RevenueAnalysisPage() {
   const loadRevenueData = async () => {
     setIsLoading(true)
     try {
-      // 1. Client orders (기존 로직 유지)
-      let clientQuery = supabase
+      let query = supabase
         .from('orders')
         .select('*, receiver_store:stores!receiver_store_id(business_name)')
         .eq('status', 'completed')
@@ -91,33 +90,18 @@ export default function RevenueAnalysisPage() {
         .lte('created_at', dateTo + 'T23:59:59')
 
       if (selectedStore !== 'all') {
-        clientQuery = clientQuery.eq('receiver_store_id', selectedStore)
+        query = query.eq('receiver_store_id', selectedStore)
       }
 
-      const { data: clientOrders, error: clientError } = await clientQuery
-      if (clientError) throw clientError
+      const { data: orders, error } = await query
 
-      // 2. Homepage/Funeral orders (신규 추가)
-      let homepageQuery = supabase
-        .from('customer_orders')
-        .select('*, assigned_store:stores!assigned_store_id(business_name)')
-        .eq('status', 'completed')
-        .gte('created_at', dateFrom)
-        .lte('created_at', dateTo + 'T23:59:59')
-
-      if (selectedStore !== 'all') {
-        homepageQuery = homepageQuery.eq('assigned_store_id', selectedStore)
-      }
-
-      const { data: homepageOrders, error: homepageError } = await homepageQuery
-      if (homepageError) throw homepageError
+      if (error) throw error
 
       // Process revenue data
       const revenueByDate = new Map<string, RevenueData>()
       const revenueByStore = new Map<string, StoreRevenue>()
 
-      // Process client orders (기존 로직)
-      clientOrders?.forEach(order => {
+      orders?.forEach(order => {
         const date = new Date(order.created_at).toISOString().split('T')[0]
         const revenue = order.payment?.total || 0
         const { commission } = calculateCommission(revenue)
@@ -137,72 +121,22 @@ export default function RevenueAnalysisPage() {
         dayData.orders += 1
 
         // Store revenue
-        const storeId = order.receiver_store_id || 'unassigned'
-        const storeName = storeId === '00000000-0000-0000-0000-000000000000' 
-          ? '본사 직접배송' 
-          : storeId === 'unassigned'
-          ? '미배정 주문'
-          : order.receiver_store?.business_name || 'Unknown'
-        
-        if (!revenueByStore.has(storeId)) {
-          revenueByStore.set(storeId, {
-            store_id: storeId,
-            store_name: storeName,
-            total_revenue: 0,
-            total_commission: 0,
-            total_orders: 0,
-            growth_rate: 0
-          })
+        if (order.receiver_store_id) {
+          if (!revenueByStore.has(order.receiver_store_id)) {
+            revenueByStore.set(order.receiver_store_id, {
+              store_id: order.receiver_store_id,
+              store_name: order.receiver_store?.business_name || 'Unknown',
+              total_revenue: 0,
+              total_commission: 0,
+              total_orders: 0,
+              growth_rate: 0
+            })
+          }
+          const storeData = revenueByStore.get(order.receiver_store_id)!
+          storeData.total_revenue += revenue
+          storeData.total_commission += commission
+          storeData.total_orders += 1
         }
-        const storeData = revenueByStore.get(storeId)!
-        storeData.total_revenue += revenue
-        storeData.total_commission += commission
-        storeData.total_orders += 1
-      })
-
-      // Process homepage/funeral orders (신규)
-      homepageOrders?.forEach(order => {
-        const date = new Date(order.created_at).toISOString().split('T')[0]
-        const revenue = order.total_amount || 0
-        // Homepage orders: commission is already in payment data or calculate from total
-        const commission = order.payment?.commission || Math.floor(revenue * 0.25)
-        
-        // Daily revenue
-        if (!revenueByDate.has(date)) {
-          revenueByDate.set(date, {
-            date,
-            revenue: 0,
-            commission: 0,
-            orders: 0
-          })
-        }
-        const dayData = revenueByDate.get(date)!
-        dayData.revenue += revenue
-        dayData.commission += commission
-        dayData.orders += 1
-
-        // Store revenue
-        const storeId = order.assigned_store_id || 'unassigned'
-        const storeName = storeId === '00000000-0000-0000-0000-000000000000'
-          ? '본사 직접배송'
-          : storeId === 'unassigned'
-          ? '미배정 주문'
-          : order.assigned_store?.business_name || 'Unknown'
-        
-        if (!revenueByStore.has(storeId)) {
-          revenueByStore.set(storeId, {
-            store_id: storeId,
-            store_name: storeName,
-            total_revenue: 0,
-            total_commission: 0,
-            total_orders: 0,
-            growth_rate: 0
-          })
-        }
-        const storeData = revenueByStore.get(storeId)!
-        storeData.total_revenue += revenue
-        storeData.total_commission += commission
-        storeData.total_orders += 1
       })
 
       setRevenueData(Array.from(revenueByDate.values()).sort((a, b) => a.date.localeCompare(b.date)))
@@ -248,74 +182,74 @@ export default function RevenueAnalysisPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
-        <div className="bg-white p-3 lg:p-4 rounded-lg shadow">
+      <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center justify-between mb-2">
-            <DollarSign className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
-            <span className={`text-xs lg:text-sm flex items-center ${Number(growthRate) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {Number(growthRate) >= 0 ? <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4" /> : <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4" />}
+            <DollarSign className="h-8 w-8 text-blue-500" />
+            <span className={`text-sm flex items-center ${Number(growthRate) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {Number(growthRate) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               {Math.abs(Number(growthRate))}%
             </span>
           </div>
-          <p className="text-xs lg:text-sm text-gray-600">총 매출</p>
-          <p className="text-base lg:text-xl font-bold">{formatCurrency(totals.revenue)}</p>
+          <p className="text-sm text-gray-600">총 매출</p>
+          <p className="text-xl font-bold">{formatCurrency(totals.revenue)}</p>
         </div>
 
-        <div className="bg-white p-3 lg:p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center justify-between mb-2">
-            <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
+            <Activity className="h-8 w-8 text-purple-500" />
           </div>
-          <p className="text-xs lg:text-sm text-gray-600">수수료 수익</p>
-          <p className="text-base lg:text-xl font-bold text-purple-600">{formatCurrency(totals.commission)}</p>
+          <p className="text-sm text-gray-600">수수료 수익</p>
+          <p className="text-xl font-bold text-purple-600">{formatCurrency(totals.commission)}</p>
         </div>
 
-        <div className="bg-white p-3 lg:p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center justify-between mb-2">
-            <Package className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
+            <Package className="h-8 w-8 text-green-500" />
           </div>
-          <p className="text-xs lg:text-sm text-gray-600">총 주문수</p>
-          <p className="text-base lg:text-xl font-bold">{totals.orders.toLocaleString()}건</p>
+          <p className="text-sm text-gray-600">총 주문수</p>
+          <p className="text-xl font-bold">{totals.orders.toLocaleString()}건</p>
         </div>
 
-        <div className="bg-white p-3 lg:p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center justify-between mb-2">
-            <BarChart3 className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
+            <BarChart3 className="h-8 w-8 text-orange-500" />
           </div>
-          <p className="text-xs lg:text-sm text-gray-600">평균 주문액</p>
-          <p className="text-base lg:text-xl font-bold">{formatCurrency(totals.avgOrderValue)}</p>
+          <p className="text-sm text-gray-600">평균 주문액</p>
+          <p className="text-xl font-bold">{formatCurrency(totals.avgOrderValue)}</p>
         </div>
 
-        <div className="bg-white p-3 lg:p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center justify-between mb-2">
-            <Users className="h-6 w-6 lg:h-8 lg:w-8 text-indigo-500" />
+            <Users className="h-8 w-8 text-indigo-500" />
           </div>
-          <p className="text-xs lg:text-sm text-gray-600">활성 화원</p>
-          <p className="text-base lg:text-xl font-bold">{storeRevenue.length}개</p>
+          <p className="text-sm text-gray-600">활성 화원</p>
+          <p className="text-xl font-bold">{storeRevenue.length}개</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-3 lg:p-4 rounded-lg shadow mb-6">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 lg:gap-4">
-          <Calendar className="h-4 w-4 text-gray-500 hidden lg:block" />
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="flex items-center gap-4">
+          <Calendar className="h-4 w-4 text-gray-500" />
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-lg"
           />
-          <span className="text-center lg:inline">~</span>
+          <span>~</span>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-lg"
           />
           
           <select
             value={selectedStore}
             onChange={(e) => setSelectedStore(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-lg"
           >
             <option value="all">전체 화원</option>
             {stores.map(store => (
@@ -326,17 +260,16 @@ export default function RevenueAnalysisPage() {
           <select
             value={viewMode}
             onChange={(e) => setViewMode(e.target.value as any)}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-lg"
           >
             <option value="daily">일별</option>
             <option value="weekly">주별</option>
             <option value="monthly">월별</option>
           </select>
 
-          <button className="lg:ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 text-sm">
+          <button className="ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
             <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">엑셀 다운로드</span>
-            <span className="sm:hidden">다운로드</span>
+            엑셀 다운로드
           </button>
         </div>
       </div>
@@ -362,78 +295,45 @@ export default function RevenueAnalysisPage() {
 
       {/* Top Stores Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-4 lg:px-6 py-4 border-b">
-          <h3 className="text-base lg:text-lg font-semibold">화원별 실적</h3>
+        <div className="px-6 py-4 border-b">
+          <h3 className="text-lg font-semibold">화원별 실적</h3>
         </div>
-        
-        {/* Mobile View */}
-        <div className="lg:hidden divide-y">
-          {storeRevenue.slice(0, 10).map((store, index) => (
-            <div key={store.store_id} className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-gray-900">#{index + 1}</span>
-                  <span className="text-sm font-medium text-gray-900">{store.store_name}</span>
-                </div>
-                <span className="text-sm font-bold">{formatCurrency(store.total_revenue)}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
-                <div>
-                  <span className="block text-gray-500">수수료</span>
-                  <span className="text-purple-600 font-medium">{formatCurrency(store.total_commission)}</span>
-                </div>
-                <div>
-                  <span className="block text-gray-500">주문수</span>
-                  <span className="font-medium">{store.total_orders}건</span>
-                </div>
-                <div>
-                  <span className="block text-gray-500">평균액</span>
-                  <span className="font-medium">{formatCurrency(Math.floor(store.total_revenue / store.total_orders))}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Desktop View */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">순위</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">화원명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">매출액</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">수수료</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">주문수</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">평균 주문액</th>
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">순위</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">화원명</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">매출액</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">수수료</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">주문수</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">평균 주문액</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {storeRevenue.slice(0, 10).map((store, index) => (
+              <tr key={store.store_id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 text-sm font-medium">
+                  {index + 1}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900">
+                  {store.store_name}
+                </td>
+                <td className="px-6 py-4 text-sm font-bold">
+                  {formatCurrency(store.total_revenue)}
+                </td>
+                <td className="px-6 py-4 text-sm text-purple-600">
+                  {formatCurrency(store.total_commission)}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {store.total_orders}건
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {formatCurrency(Math.floor(store.total_revenue / store.total_orders))}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {storeRevenue.slice(0, 10).map((store, index) => (
-                <tr key={store.store_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium">
-                    {index + 1}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {store.store_name}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold">
-                    {formatCurrency(store.total_revenue)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-purple-600">
-                    {formatCurrency(store.total_commission)}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    {store.total_orders}건
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    {formatCurrency(Math.floor(store.total_revenue / store.total_orders))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )

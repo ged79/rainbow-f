@@ -5,7 +5,7 @@
  * 3. 배달 시간 준수율이 높은 화원
  */
 
-import type { Store } from '@flower/shared/types'
+import type { Store } from '@/shared/types'
 
 export interface StoreMetrics {
   totalOrdersSent: number      // 발주 건수

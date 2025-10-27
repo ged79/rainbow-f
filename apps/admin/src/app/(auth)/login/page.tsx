@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
 
     try {
       // Admin login with email check
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await (supabase.auth as any).signInWithPassword({
         email,
         password
       })
@@ -37,12 +37,16 @@ export default function AdminLoginPage() {
         .single()
 
       if (adminError || !adminUser) {
-        await supabase.auth.signOut()
+        await (supabase.auth as any).signOut()
         throw new Error('관리자 계정이 아닙니다')
       }
 
       toast.success('로그인 성공')
-      router.push('/dashboard')
+      
+      // Force redirect with delay
+      setTimeout(() => {
+        window.location.replace('/dashboard')
+      }, 500)
     } catch (error: any) {
       toast.error(error.message || '로그인 실패')
     } finally {

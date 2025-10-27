@@ -9,8 +9,8 @@ import {
   formatPhone,
   homepageToUnifiedOrder,
   clientToUnifiedOrder
-} from '@flower/shared/utils'
-import { UnifiedOrder, Store } from '@flower/shared/types'
+} from '@/shared/utils'
+import { UnifiedOrder, Store } from '@/shared/types'
 import toast from 'react-hot-toast'
 import { 
   Clock, 
@@ -451,18 +451,14 @@ export default function OrderAssignmentPage() {
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-gray-400" />
                         <span className="font-medium">
-                          {order.products?.map(p => p.name).join(', ') || order.product?.name || '상품정보 없음'}
+                          {order.product?.name || '상품정보 없음'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-gray-400" />
                         <span>
                           {order.delivery?.date || formatDate(order.created_at)} 
-                          {order.delivery?.time || 
-                           (order.delivery?.status === 'express' ? 
-                            `즉시(${new Date(new Date(order.created_at).getTime() + 3*60*60*1000).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}까지)` : 
-                            '시간미정')
-                          }
+                          {order.delivery?.time || '시간미정'}
                         </span>
                       </div>
                     </div>
@@ -470,7 +466,7 @@ export default function OrderAssignmentPage() {
                     <div className="mt-3 pt-3 border-t">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-bold">
-                          {formatCurrency(order.payment?.total || order.pricing?.final_amount || 0)}
+                          {formatCurrency((order as any).payment?.total || order.pricing?.final_amount || 0)}
                         </span>
                       </div>
                       <button

@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
         quantity: productInfo.quantity || 1,
         delivery_date: body.deliveryDate || body.delivery_date,
         delivery_time: body.deliveryTime || body.delivery_time,
-        ribbon_text: body.ribbonMessage ? [body.ribbonMessage] : body.ribbon_text || [],
+        ribbon_text: Array.isArray(body.ribbonMessage) ? body.ribbonMessage : (body.ribbonMessage ? [body.ribbonMessage] : []),
         special_instructions: body.message || body.special_instructions || '',
         referrer_phone: body.referrerPhone ? formatPhone(body.referrerPhone) : null,
         points_earned: buyerPoints,

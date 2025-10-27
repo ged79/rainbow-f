@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatCurrency, formatDate, formatPhone } from '@flower/shared/utils'
+import { formatCurrency, formatDate, formatPhone } from '@/shared/utils'
 
 export default function OrdersDebugPage() {
   const [orders, setOrders] = useState<any[]>([])
@@ -22,7 +22,7 @@ export default function OrdersDebugPage() {
 
   const checkAuth = async () => {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser()
+      const { data: { user }, error } = await (supabase.auth as any).getUser()
       console.log('Auth check:', { user, error })
       setUser(user)
       if (error) {

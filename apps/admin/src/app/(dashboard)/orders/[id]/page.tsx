@@ -3,13 +3,13 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import type { OrderWithStores } from '@flower/shared/types'
+import type { OrderWithStores } from '@/shared/types'
 
 interface ExtendedOrder extends OrderWithStores {
   completion_photos?: string[]
-  updated_at?: string
+  updated_at: string
 }
-import { formatCurrency, formatPhone, formatDate } from '@flower/shared/utils'
+import { formatCurrency, formatPhone, formatDate } from '@/shared/utils'
 import { 
   ArrowLeft,
   Package, 

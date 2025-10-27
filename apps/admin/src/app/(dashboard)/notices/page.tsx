@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatDate } from '@flower/shared/utils'
+import { formatDate } from '@/shared/utils'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { 

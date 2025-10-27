@@ -7,7 +7,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* 회사 정보 */}
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-gray-900 font-bold text-lg mb-4">RAINBOW-F</h3>
+            <h3 className="text-gray-900 font-bold text-lg mb-4">RAINBOW-F (코넥서스)</h3>
             <p className="text-sm mb-2">
               대표: 김영아 | 사업자등록번호: 853-81-03832
             </p>
@@ -70,7 +70,7 @@ export default function Footer() {
         <div className="border-t border-gray-300 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-xs text-gray-600 mb-4 md:mb-0">
-              © 2024 RAINBOW-F. All rights reserved.
+              © 2024 RAINBOW-F (코넥서스). All rights reserved.
             </p>
             <div className="flex space-x-6 text-xs">
               <Link href="/terms" className="hover:text-gray-900 transition">이용약관</Link>

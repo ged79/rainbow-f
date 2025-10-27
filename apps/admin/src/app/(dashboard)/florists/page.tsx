@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatCurrency, formatPhone, REGIONS, matchAreaSido } from '@flower/shared/utils'
-import type { Store } from '@flower/shared/types'
+import { formatCurrency, formatPhone, REGIONS, matchAreaSido } from '@/shared/utils'
+import type { Store } from '@/shared/types'
 import { 
   Store as StoreIcon,
   MapPin,
@@ -116,12 +116,12 @@ export default function FloristsPage() {
       if (region) {
         filtered = filtered.filter(store => {
           // address로 확인
-          const addr = store.address;
-          if (typeof addr === 'string') {
-            return addr.includes(region.short) || addr.includes(region.long)
+          const address = store.address as any
+          if (address && typeof address === 'string') {
+            return address.includes(region.short) || address.includes(region.long)
           }
-          if (store.address && typeof store.address === 'object') {
-            if (store.address.sido === region.short) return true
+          if (address && typeof address === 'object') {
+            if (address.sido === region.short) return true
           }
           
           // delivery_areas로도 확인 (긴 형식)
@@ -203,12 +203,12 @@ export default function FloristsPage() {
           const regionCount = region.code === 'all' 
             ? stores.length 
             : stores.filter(s => {
-                const addr = s.address;
+                const addr = s.address as any
                 if (typeof addr === 'string') {
                   return addr.includes(region.short) || addr.includes(region.long)
                 }
-                if (s.address && typeof s.address === 'object') {
-                  return s.address.sido === region.short
+                if (addr && typeof addr === 'object') {
+                  return addr.sido === region.short
                 }
                 return false
               }).length

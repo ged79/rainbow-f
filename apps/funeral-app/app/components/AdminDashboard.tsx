@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, X, Settings, FileText, Calendar, MapPin } from 'lucide-react';
+import { saveFuneral, getFuneralsByHome, getFuneralByRoom, deleteFuneral } from '../lib/funeralApi';
 
 const mockRooms = [
   { id: 1, name: '1빈소', floor: '2층', status: 'available' },
@@ -12,7 +14,15 @@ const mockRooms = [
   { id: 6, name: '예비', floor: '', status: 'available' },
 ];
 
+const getFuneralHomeId = () => {
+  if (typeof window !== 'undefined') {
+    return sessionStorage.getItem('funeral_home_id') || '';
+  }
+  return '';
+};
+
 export default function AdminDashboard() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('현황판');
@@ -74,104 +84,90 @@ export default function AdminDashboard() {
   }, []);
 
   // 모든 방의 데이터 불러오기
-  const loadAllRoomsData = () => {
-    try {
-      const savedFunerals = localStorage.getItem('funerals');
-      if (savedFunerals) {
-        const funerals = JSON.parse(savedFunerals);
-        const roomData: any = {};
-        
-        funerals.forEach((funeral: any) => {
-          if (funeral.room_id) {
-            roomData[funeral.room_id] = funeral;
-          }
-        });
-        
-        setRoomFunerals(roomData);
-        
-        // 방 상태 업데이트
-        const updatedRooms = mockRooms.map(room => {
-          const roomKey = `room-${room.id}`;
-          const hasData = roomData[roomKey];
-          return {
-            ...room,
-            status: hasData ? 'occupied' : 'available'
-          };
-        });
-        setRooms(updatedRooms);
-      }
-    } catch (error) {
-      console.error('모든 방 데이터 불러오기 실패:', error);
-    }
-  };
+const loadAllRoomsData = async () => {
+  try {
+    const funeralHomeId = getFuneralHomeId();
+    if (!funeralHomeId) return;
+    const funerals = await getFuneralsByHome(funeralHomeId);
+    const roomData: any = {};
+    funerals.forEach((funeral: any) => {
+      const roomKey = `room-${funeral.room_number}`;
+      roomData[roomKey] = funeral;
+    });
+    setRoomFunerals(roomData);
+    const updatedRooms = mockRooms.map(room => {
+      const roomKey = `room-${room.id}`;
+      const hasData = roomData[roomKey];
+      return { ...room, status: hasData ? 'occupied' : 'available' };
+    });
+    setRooms(updatedRooms);
+  } catch (error) {
+    console.error('데이터 불러오기 실패:', error);
+    alert('데이터를 불러오는데 실패했습니다.');
+  }
+};
 
   // 저장된 모든 장례 목록 불러오기
-  const loadSavedFuneralsList = () => {
-    try {
-      const savedFunerals = localStorage.getItem('funerals');
-      if (savedFunerals) {
-        const funerals = JSON.parse(savedFunerals);
-        setSavedFuneralsList(funerals);
-        loadAllRoomsData(); // 방 데이터도 새로고침
-      }
-    } catch (error) {
-      console.error('목록 불러오기 실패:', error);
-    }
-  };
+const loadSavedFuneralsList = async () => {
+  try {
+    const funeralHomeId = getFuneralHomeId();
+    if (!funeralHomeId) return;
+    const funerals = await getFuneralsByHome(funeralHomeId);
+    setSavedFuneralsList(funerals);
+  } catch (error) {
+    console.error('목록 불러오기 실패:', error);
+  }
+};
 
   // 빈소 데이터 불러오기
-  const loadRoomData = (roomId: string) => {
-    try {
-      const savedFunerals = localStorage.getItem('funerals');
-      if (savedFunerals) {
-        const funerals = JSON.parse(savedFunerals);
-        const roomData = funerals.find((f: any) => f.room_id === roomId);
-        
-        if (roomData) {
-          // 데이터가 있으면 모든 필드에 설정
-          setDeceasedName(roomData.deceased_name || '');
-          setDeceasedNameHanja(roomData.deceased_hanja || '');
-          setDeceasedAge(roomData.age?.toString() || '');
-          setDeceasedGender(roomData.gender || '');
-          setReligion(roomData.religion || '');
-          setReligionTitle(roomData.religion_title || '');
-          setPlacementTime(roomData.placement_time || '');
-          setCasketTime(roomData.casket_time || '');
-          setShroudTime(roomData.shroud_time || '');
-          setFuneralTime(roomData.funeral_time || '');
-          setCheckoutTime(roomData.checkout_time || '');
-          setDeathTime(roomData.death_time || '');
-          setPlacementDate(roomData.placement_date || '');
-          setBurialType(roomData.burial_type || '');
-          setBurialLocation(roomData.burial_location || '');
-          setBurialLocation2(roomData.burial_location_2 || '');
-          setDeathCause(roomData.death_cause || '');
-          setDeathPlace(roomData.death_place || '');
-          setChemicalTreatment(roomData.chemical_treatment || '');
-          setDeceasedAddress(roomData.deceased_address || '');
-          setDeceasedNote(roomData.deceased_note || '');
-          setResidentNumber(roomData.resident_number || '');
-          setBaptismalName(roomData.baptismal_name || '');
-          setOtherTitle(roomData.other_title || '');
-          setBusinessNote(roomData.business_note || '');
-          setFuneralDirector(roomData.funeral_director || '');
-          setFuneralCompany(roomData.funeral_company || '');
-          setBankAccounts(roomData.bank_accounts || [{ id: 1, bankName: '', accountNumber: '', accountHolder: '' }]);
-          setUsePhotoInObituary(roomData.use_photo_in_obituary !== undefined ? roomData.use_photo_in_obituary : true);
-          setChiefMournerMessage(roomData.chief_message || '');
-          setDeceasedPhoto(roomData.photo_url || null);
-          if (roomData.family_members && roomData.family_members.length > 0) {
-            setFamilyMembers(roomData.family_members);
-          }
-        } else {
-          // 데이터가 없으면 초기화 (확인 없이)
-          resetFormSilently();
-        }
+const loadRoomData = async (roomId: string) => {
+  try {
+    const funeralHomeId = getFuneralHomeId();
+    if (!funeralHomeId) return;
+    const roomNumber = parseInt(roomId.split('-')[1]);
+    const roomData = await getFuneralByRoom(funeralHomeId, roomNumber);
+    if (roomData) {
+      setDeceasedName(roomData.deceased_name || '');
+      setDeceasedNameHanja(roomData.deceased_hanja || '');
+      setDeceasedAge(roomData.age?.toString() || '');
+      setDeceasedGender(roomData.gender || '');
+      setReligion(roomData.religion || '');
+      setReligionTitle(roomData.religion_title || '');
+      setPlacementTime(roomData.placement_time || '');
+      setCasketTime(roomData.casket_time || '');
+      setShroudTime(roomData.shroud_time || '');
+      setFuneralTime(roomData.funeral_time || '');
+      setCheckoutTime(roomData.checkout_time || '');
+      setDeathTime(roomData.death_time || '');
+      setPlacementDate(roomData.placement_date || '');
+      setBurialType(roomData.burial_type || '');
+      setBurialLocation(roomData.burial_location || '');
+      setBurialLocation2(roomData.burial_location_2 || '');
+      setDeathCause(roomData.death_cause || '');
+      setDeathPlace(roomData.death_place || '');
+      setChemicalTreatment(roomData.chemical_treatment || '');
+      setDeceasedAddress(roomData.deceased_address || '');
+      setDeceasedNote(roomData.deceased_note || '');
+      setResidentNumber(roomData.resident_number || '');
+      setBaptismalName(roomData.baptismal_name || '');
+      setOtherTitle(roomData.other_title || '');
+      setBusinessNote(roomData.business_note || '');
+      setFuneralDirector(roomData.funeral_director || '');
+      setFuneralCompany(roomData.funeral_company || '');
+      setBankAccounts(roomData.bank_accounts || [{ id: 1, bankName: '', accountNumber: '', accountHolder: '' }]);
+      setUsePhotoInObituary(roomData.use_photo_in_obituary !== undefined ? roomData.use_photo_in_obituary : true);
+      setChiefMournerMessage(roomData.chief_message || '');
+      setDeceasedPhoto(roomData.photo_url || null);
+      if (roomData.family_members && roomData.family_members.length > 0) {
+        setFamilyMembers(roomData.family_members);
       }
-    } catch (error) {
-      console.error('데이터 불러오기 실패:', error);
+    } else {
+      resetFormSilently();
     }
-  };
+  } catch (error) {
+    console.error('데이터 불러오기 실패:', error);
+  }
+};
 
   // 종교별 심볼 반환 함수
   const getReligionSymbol = (religion: string) => {
@@ -351,75 +347,81 @@ export default function AdminDashboard() {
   };
 
   // 빈소 퇴실 처리
-  const handleCheckOut = (roomId: number) => {
-    if (confirm('퇴실 처리하시겠습니까?')) {
-      setRooms(prev => prev.map(room => 
-        room.id === roomId ? { ...room, status: 'available' } : room
-      ));
+const handleCheckOut = async (roomId: number) => {
+  if (confirm('퇴실 처리하시겠습니까?')) {
+    try {
+      const funeralHomeId = getFuneralHomeId();
+      if (!funeralHomeId) return;
+      const funeral = await getFuneralByRoom(funeralHomeId, roomId);
+      if (funeral?.id) {
+        await deleteFuneral(funeral.id);
+        alert('퇴실 처리되었습니다.');
+        await loadAllRoomsData();
+      }
+    } catch (error) {
+      console.error('퇴실 처리 실패:', error);
+      alert('퇴실 처리에 실패했습니다.');
     }
-  };
+  }
+};
 
   // 빈소 이동 처리
-  const handleMoveRoom = (currentRoomId: number) => {
-    if (!selectedMoveRoom) {
-      alert('이동할 빈소를 선택해주세요.');
-      return;
-    }
-    
+const handleMoveRoom = async (currentRoomId: number) => {
+  if (!selectedMoveRoom) {
+    alert('이동할 빈소를 선택해주세요.');
+    return;
+  }
+  const funeralHomeId = getFuneralHomeId();
+  if (!funeralHomeId) {
+    alert('로그인이 필요합니다.');
+    return;
+  }
+  try {
     const targetRoomId = parseInt(selectedMoveRoom);
     const targetRoom = rooms.find(r => r.id === targetRoomId);
-    const currentRoomKey = `room-${currentRoomId}`;
-    const targetRoomKey = `room-${targetRoomId}`;
-    
-    // 대상 빈소가 이미 사용중인지 확인
-    const savedFunerals = localStorage.getItem('funerals');
-    if (savedFunerals) {
-      const funerals = JSON.parse(savedFunerals);
-      const targetHasData = funerals.some((f: any) => f.room_id === targetRoomKey);
-      
-      if (targetHasData) {
-        alert('해당 빈소는 이미 사용중입니다.');
-        return;
-      }
-      
-      // 현재 빈소의 데이터를 찾아서 room_id 업데이트
-      const updatedFunerals = funerals.map((f: any) => {
-        if (f.room_id === currentRoomKey) {
-          return { ...f, room_id: targetRoomKey, updated_at: new Date().toISOString() };
-        }
-        return f;
-      });
-      
-      // localStorage 업데이트
-      localStorage.setItem('funerals', JSON.stringify(updatedFunerals));
+    const targetFuneral = await getFuneralByRoom(funeralHomeId, targetRoomId);
+    if (targetFuneral) {
+      alert('해당 빈소는 이미 사용중입니다.');
+      return;
     }
-    
-    // 현재 빈소는 비우고, 대상 빈소는 사용중으로 변경
+    const currentFuneral = await getFuneralByRoom(funeralHomeId, currentRoomId);
+    if (!currentFuneral) {
+      alert('이동할 장례 정보를 찾을 수 없습니다.');
+      return;
+    }
+    const updatedData = { ...currentFuneral, room_number: targetRoomId };
+    await saveFuneral(updatedData);
     setRooms(prev => prev.map(room => {
       if (room.id === currentRoomId) return { ...room, status: 'available' };
       if (room.id === targetRoomId) return { ...room, status: 'occupied' };
       return room;
     }));
-    
-    // 이동한 빈소로 페이지 이동
-    setCurrentPage(targetRoomKey);
+    setCurrentPage(`room-${targetRoomId}`);
     setSelectedMoveRoom('');
     alert(`${targetRoom?.name}으로 이동했습니다.`);
-    
-    // 데이터 새로고침
-    loadAllRoomsData();
-  };
+    await loadAllRoomsData();
+  } catch (error) {
+    console.error('빈소 이동 실패:', error);
+    alert('빈소 이동에 실패했습니다.');
+  }
+};
 
   // 빈소 정보 저장
-  const handleSaveRoomInfo = async () => {
-    // 필수 항목 검증
-    if (!deceasedName) {
-      alert('고인 이름은 필수 입력 항목입니다.');
-      return;
-    }
-
-    // 저장할 데이터 구성
+const handleSaveRoomInfo = async () => {
+  if (!deceasedName) {
+    alert('고인 이름은 필수 입력 항목입니다.');
+    return;
+  }
+  const funeralHomeId = getFuneralHomeId();
+  if (!funeralHomeId) {
+    alert('로그인이 필요합니다.');
+    return;
+  }
+  try {
+    const roomNumber = parseInt(currentPage.split('-')[1]);
     const funeralData = {
+      funeral_home_id: funeralHomeId,
+      room_number: roomNumber,
       deceased_name: deceasedName,
       deceased_hanja: deceasedNameHanja,
       age: deceasedAge ? parseInt(deceasedAge) : null,
@@ -452,44 +454,16 @@ export default function AdminDashboard() {
       chief_message: chiefMournerMessage,
       photo_url: deceasedPhoto,
       family_members: familyMembers,
-      room_id: currentPage, // 현재 빈소 ID
-      status: 'active',
-      created_at: new Date().toISOString()
+      status: 'active' as const
     };
-
-    try {
-      // LocalStorage에 저장 (Supabase 연동 전 임시 저장)
-      const savedFunerals = localStorage.getItem('funerals');
-      const funerals = savedFunerals ? JSON.parse(savedFunerals) : [];
-      
-      // 같은 빈소의 기존 데이터가 있으면 업데이트, 없으면 추가
-      const existingIndex = funerals.findIndex((f: any) => f.room_id === currentPage);
-      if (existingIndex >= 0) {
-        funerals[existingIndex] = { ...funerals[existingIndex], ...funeralData, updated_at: new Date().toISOString() };
-      } else {
-        funerals.push({ id: Date.now().toString(), ...funeralData });
-      }
-      
-      localStorage.setItem('funerals', JSON.stringify(funerals));
-      
-      alert('저장되었습니다.');
-      console.log('Saved data:', funeralData);
-      
-      // 저장 후 목록 새로고침
-      loadSavedFuneralsList();
-      
-      // TODO: Supabase 연동
-      // const { data, error } = await supabase
-      //   .from('funerals')
-      //   .insert([funeralData]);
-      // if (error) throw error;
-      
-    } catch (error) {
-      console.error('저장 실패:', error);
-      alert('저장에 실패했습니다. 다시 시도해주세요.');
-    }
-  };
-
+    await saveFuneral(funeralData);
+    alert('저장되었습니다.');
+    await loadAllRoomsData();
+  } catch (error) {
+    console.error('저장 실패:', error);
+    alert('저장에 실패했습니다. 다시 시도해주세요.');
+  }
+};
   // 사진 업로드 핸들러
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -599,7 +573,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const tabs = ['현황판', '지난상가', '뷰어', '지방', '공지사항', '화장예약'];
+  const tabs = ['현황판', '지난상가', '공지사항', '화장예약'];
   const roomMenuItems = [
     { id: 'room-1', label: '1빈소 (2층)' },
     { id: 'room-2', label: '2빈소 (2층)' },
@@ -637,7 +611,7 @@ export default function AdminDashboard() {
     <div className="bg-white border-b">
       <div className="flex">
         {tabs.map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 font-semibold ${activeTab === tab ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-600'}`}>{tab}</button>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 font-semibold ${activeTab === tab ? 'text-purple-700 border-b-2 border-purple-700' : 'text-gray-600'}`}>{tab}</button>
         ))}
       </div>
     </div>
@@ -649,7 +623,7 @@ export default function AdminDashboard() {
         <h2 className="text-2xl font-bold">저장된 장례 정보</h2>
         <button 
           onClick={() => loadSavedFuneralsList()} 
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+          className="bg-slate-600 text-white px-4 py-2 rounded text-sm hover:bg-slate-700"
         >
           새로고침
         </button>
@@ -742,19 +716,25 @@ export default function AdminDashboard() {
                         setCurrentPage(funeral.room_id);
                       }
                     }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 whitespace-nowrap"
+                    className="bg-slate-600 text-white px-4 py-2 rounded text-sm hover:bg-slate-700 whitespace-nowrap"
                   >
                     보기
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm('이 장례 정보를 삭제하시겠습니까?')) {
-                        const funerals = savedFuneralsList.filter(f => f.id !== funeral.id);
-                        localStorage.setItem('funerals', JSON.stringify(funerals));
-                        loadSavedFuneralsList();
-                        alert('삭제되었습니다.');
-                      }
-                    }}
+onClick={async () => {
+  if (confirm('이 장례 정보를 삭제하시겠습니까?')) {
+    try {
+      if (funeral.id) {
+        await deleteFuneral(funeral.id);
+        await loadSavedFuneralsList();
+        alert('삭제되었습니다.');
+      }
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      alert('삭제에 실패했습니다.');
+    }
+  }
+}}
                     className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 whitespace-nowrap"
                   >
                     삭제
@@ -768,39 +748,122 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const renderCompletedFunerals = () => (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">지난상가</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold">고인명</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">나이</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">빈소</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">입실일</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">발인일</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">상주</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">연락처</th>
-            </tr>
-          </thead>
-          <tbody>
-            {completedFunerals.map((funeral, index) => (
-              <tr key={funeral.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
-                <td className="px-4 py-3 text-sm">{funeral.deceasedName}</td>
-                <td className="px-4 py-3 text-sm">{funeral.age}세</td>
-                <td className="px-4 py-3 text-sm">{funeral.room}</td>
-                <td className="px-4 py-3 text-sm">{funeral.placementDate}</td>
-                <td className="px-4 py-3 text-sm">{funeral.funeralDate}</td>
-                <td className="px-4 py-3 text-sm">{funeral.chiefMourner}</td>
-                <td className="px-4 py-3 text-sm">{funeral.phone}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  const renderCompletedFunerals = () => {
+    // localStorage에서 모든 저장된 장례 정보 불러오기
+    const allFunerals = savedFuneralsList.length > 0 ? savedFuneralsList : [];
+    
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">지난상가</h2>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => loadSavedFuneralsList()} 
+              className="bg-slate-600 text-white px-4 py-2 rounded text-sm hover:bg-slate-700"
+            >
+              새로고침
+            </button>
+            <button 
+              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
+              onClick={() => {
+                alert('엑셀 다운로드 기능은 추후 구현 예정입니다.');
+              }}
+            >
+              엑셀 다운로드
+            </button>
+          </div>
+        </div>
+        
+        {allFunerals.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            저장된 장례 정보가 없습니다.
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">고인명</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">한자명</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">나이</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">성별</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">종교</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">빈소</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">입실일시</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">발인일시</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">장지</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">상주</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">연락처</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold">액션</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allFunerals.map((funeral, index) => {
+                  const chiefMourner = funeral.family_members?.find((m: any) => m.relation === '상주');
+                  const roomName = funeral.room_id ? funeral.room_id.replace('room-', '') + '빈소' : '-';
+                  
+                  return (
+                    <tr key={funeral.id || index} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                      <td className="px-4 py-3 text-sm font-medium">{funeral.deceased_name || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{funeral.deceased_hanja || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{funeral.age ? `${funeral.age}세` : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-center">{funeral.gender || '-'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {funeral.religion ? (
+                          <span>
+                            {getReligionSymbol(funeral.religion)} {funeral.religion}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm">{roomName}</td>
+                      <td className="px-4 py-3 text-sm text-xs">
+                        {funeral.placement_time ? new Date(funeral.placement_time).toLocaleString('ko-KR', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-xs text-red-600 font-medium">
+                        {funeral.funeral_time ? new Date(funeral.funeral_time).toLocaleString('ko-KR', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm">{funeral.burial_location || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{chiefMourner?.name || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{chiefMourner?.phone || '-'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => {
+                            if (funeral.room_id) {
+                              setCurrentPage(funeral.room_id);
+                              setActiveTab('현황판');
+                            }
+                          }}
+                          className="bg-slate-600 text-white px-3 py-1 rounded text-xs hover:bg-slate-700"
+                        >
+                          상세보기
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            
+            <div className="bg-gray-50 px-6 py-3 border-t">
+              <p className="text-sm text-gray-600">
+                총 <span className="font-bold text-blue-600">{allFunerals.length}</span>건의 장례 기록
+              </p>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderHygiene = () => (
     <div className="p-6">
@@ -885,7 +948,7 @@ export default function AdminDashboard() {
   const renderDetailModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-[800px] max-h-[90vh] overflow-y-auto">
-        <div className="bg-gray-700 p-4 flex justify-between items-center">
+        <div className="bg-slate-700 p-4 flex justify-between items-center">
           <h3 className="text-white font-bold text-lg">고인정보상세입력</h3>
           <button onClick={() => setShowDetailModal(false)} className="text-white"><X size={24} /></button>
         </div>
@@ -903,7 +966,7 @@ export default function AdminDashboard() {
               <div><label className="text-sm block mb-1">상주이름</label><input type="text" className="w-full border rounded px-2 py-1 text-sm" /></div>
             </div>
           </div>
-          <button onClick={() => setShowDetailModal(false)} className="w-full bg-blue-600 text-white py-3 rounded-lg mt-6">저장</button>
+          <button onClick={() => setShowDetailModal(false)} className="w-full bg-slate-600 text-white py-3 rounded-lg mt-6">저장</button>
         </div>
       </div>
     </div>
@@ -915,7 +978,7 @@ export default function AdminDashboard() {
       <div className="bg-gray-50 p-6">
         <div className="mb-4 flex items-center gap-2">
           <h2 className="text-xl font-bold">{room.name} {room.floor && `(${room.floor})`}</h2>
-          <button onClick={() => setShowDetailModal(true)} className="bg-gray-600 text-white px-4 py-1 rounded text-sm hover:bg-gray-700">고인정보상세입력</button>
+          <button onClick={() => setShowDetailModal(true)} className="bg-slate-600 text-white px-4 py-1 rounded text-sm hover:bg-slate-700">고인정보상세입력</button>
           <button 
             onClick={(e) => {
               e.preventDefault();
@@ -981,7 +1044,7 @@ export default function AdminDashboard() {
                 alert('부고장을 열 수 없습니다.');
               }
             }} 
-            className="bg-purple-600 text-white px-4 py-1 rounded text-sm hover:bg-purple-700"
+            className="bg-purple-700 text-white px-4 py-1 rounded text-sm hover:bg-purple-800"
             type="button"
           >
             부고장미리보기
@@ -1005,7 +1068,7 @@ export default function AdminDashboard() {
           </select>
           <button 
             onClick={() => handleMoveRoom(roomId)}
-            className="bg-blue-600 text-white px-4 py-1 rounded text-sm hover:bg-blue-700"
+            className="bg-slate-600 text-white px-4 py-1 rounded text-sm hover:bg-slate-700"
           >
             빈소이동
           </button>
@@ -1107,7 +1170,7 @@ export default function AdminDashboard() {
               />
               <label 
                 htmlFor="photo-upload" 
-                className="inline-block bg-gray-700 text-white px-4 py-2 rounded text-sm mb-2 cursor-pointer hover:bg-gray-600"
+                className="inline-block bg-slate-700 text-white px-4 py-2 rounded text-sm mb-2 cursor-pointer hover:bg-slate-600"
               >
                 사진 등록
               </label>
@@ -1349,7 +1412,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex gap-2 pt-4">
-              <button onClick={handleSaveRoomInfo} className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">저장</button>
+              <button onClick={handleSaveRoomInfo} className="flex-1 bg-slate-600 text-white py-2 rounded hover:bg-slate-700">저장</button>
               <button onClick={handleReset} className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600">초기화</button>
             </div>
           </div>
@@ -1388,9 +1451,9 @@ export default function AdminDashboard() {
     });
 
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col">
+      <div className="bg-gray-900 flex flex-col">
         {/* Top Header */}
-        <div className="bg-blue-700 text-white px-8 py-3 shadow-lg">
+        <div className="bg-slate-800 text-white px-8 py-3 shadow-lg">
           <div className="max-w-screen-2xl mx-auto flex justify-between items-center">
             <h1 className="text-2xl font-bold">영동병원장례식장</h1>
             <div className="text-lg">
@@ -1400,10 +1463,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-1">
           <div className="max-w-screen-2xl mx-auto">
             {/* Search Bar */}
-            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+            <div className="mb-1 bg-white p-2 rounded-lg shadow-sm">
               <div className="flex items-center gap-4">
                 <input 
                   type="text" 
@@ -1412,13 +1475,13 @@ export default function AdminDashboard() {
                   onChange={(e) => setSearchTerm(e.target.value)} 
                   className="border rounded px-3 py-2 text-sm w-64" 
                 />
-                <button className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
+                <button className="bg-slate-700 text-white px-4 py-2 rounded text-sm hover:bg-slate-800">
                   <Search size={16} className="inline mr-1" />
                   검색
                 </button>
                 <button 
                   onClick={() => loadAllRoomsData()} 
-                  className="ml-auto bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+                  className="ml-auto bg-slate-600 text-white px-4 py-2 rounded text-sm hover:bg-slate-700"
                 >
                   새로고침
                 </button>
@@ -1426,15 +1489,15 @@ export default function AdminDashboard() {
                   onClick={() => {
                     window.open('/status-board', '_blank', 'fullscreen=yes');
                   }}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700"
+                  className="bg-purple-700 text-white px-4 py-2 rounded text-sm hover:bg-purple-800"
                 >
                   현황판보기
                 </button>
               </div>
             </div>
 
-            {/* 빈소 카드 - 와이드스크린 전광판 형태 (한줄에 2개) */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {/* 빈소 카드 - 3x2 그리드 (6개 빈소) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
               {rooms.map(room => {
                 const roomKey = `room-${room.id}`;
                 const funeralData = roomFunerals[roomKey];
@@ -1450,29 +1513,29 @@ export default function AdminDashboard() {
                     key={room.id} 
                     className="bg-white rounded-lg overflow-hidden shadow-2xl cursor-pointer"
                     onClick={() => room.floor && setCurrentPage(`room-${room.id}`)}
-                    style={{ border: '3px solid #1e40af' }}
+                    style={{ border: '3px solid #475569', minWidth: '520px' }}
                   >
-                    {/* Top Header */}
-                    <div className="bg-blue-700 text-white px-6 py-2 flex justify-between items-center">
+                    {/* Top Header - 컴팩트 */}
+                    <div className="bg-slate-700 text-white px-4 py-3 flex justify-between items-center">
                       <div>
                         <div className="text-sm">의료법인 조은의료재단</div>
-                        <div className="text-2xl font-bold">영동병원장례식장</div>
+                        <div className="text-xl font-bold">영동병원장례식장</div>
                       </div>
-                      <div className="text-lg">{dateStr}</div>
+                      <div className="text-base">{dateStr}</div>
                     </div>
                     
-                    {/* Room and Deceased info bar */}
-                    <div className="bg-blue-800 text-white px-6 py-3">
-                      <div className="flex items-center gap-8">
-                        <div className="bg-blue-900 px-6 py-2 rounded">
-                          <span className="text-2xl font-bold">{room.name} ({room.floor || ''})</span>
+                    {/* Room and Deceased info bar - 컴팩트 */}
+                    <div className="bg-slate-600 text-white px-4 py-3.5">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-purple-900/30 px-5 py-2 rounded">
+                          <span className="text-xl font-bold">{room.name} ({room.floor || ''})</span>
                         </div>
                         {isOccupied && funeralData && (
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             {funeralData.religion && getReligionSymbol(funeralData.religion) && (
-                              <span className="text-red-400 text-2xl">{getReligionSymbol(funeralData.religion)}</span>
+                              <span className="text-red-400 text-xl">{getReligionSymbol(funeralData.religion)}</span>
                             )}
-                            <span className="text-2xl font-bold">
+                            <span className="text-xl font-bold">
                               故 {funeralData.deceased_name}
                               {funeralData.religion_title && ` (${funeralData.religion_title})`}
                               {funeralData.age && funeralData.gender && ` (${funeralData.gender}/${funeralData.age}세)`}
@@ -1482,12 +1545,12 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     
-                    {/* Main Content */}
+                    {/* Main Content - 높이 축소 */}
                     <div className="bg-gray-100">
                       {isOccupied && funeralData ? (
                         <div className="flex">
-                          {/* Photo section */}
-                          <div className="w-64 p-6 bg-white">
+                          {/* Photo section - 축소 */}
+                          <div className="w-48 p-5 bg-white">
                             {funeralData.photo_url ? (
                               <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden shadow-lg">
                                 <img 
@@ -1498,79 +1561,69 @@ export default function AdminDashboard() {
                             </div>
                             ) : (
                               <div className="w-full h-48 bg-gray-300 rounded-lg flex items-center justify-center">
-                                <span className="text-gray-500 text-lg">영정사진</span>
+                                <span className="text-gray-500 text-base">영정사진</span>
                               </div>
                             )}
                           </div>
                           
-                          {/* Family info */}
-                          <div className="flex-1 p-6 bg-white">
+                          {/* Family info - 컴팩트 */}
+                          <div className="flex-1 p-5 bg-white">
                             {Object.keys(familyGroups).length > 0 && (
                               <div className="space-y-3">
                                 {Object.entries(familyGroups).map(([relation, names]) => (
-                                  <div key={relation} className="flex items-start text-xl">
-                                    <span className="font-bold min-w-[100px]">{relation}</span>
-                                    <span className="text-2xl font-bold mx-4">:</span>
+                                  <div key={relation} className="flex items-start text-base">
+                                    <span className="font-bold min-w-[80px]">{relation}</span>
+                                    <span className="text-xl font-bold mx-2">:</span>
                                     <span className="text-gray-800">{names.join(', ')}</span>
                                   </div>
                                 ))}
-                                {funeralData.chief_message && (
-                                  <div className="flex items-start text-xl mt-4">
-                                    <span className="font-bold min-w-[100px]">배우자</span>
-                                    <span className="text-2xl font-bold mx-4">:</span>
-                                    <span className="text-gray-800">박영하</span>
-                                  </div>
-                                )}
                               </div>
                             )}
                           </div>
                         </div>
                       ) : (
-                        <div className="py-32 bg-white">
+                        <div className="py-28 bg-white">
                           <div className="text-center">
-                            <div className="text-gray-300 text-7xl mb-4">🕊️</div>
-                            <p className="text-gray-400 text-3xl font-medium">공실</p>
+                            <div className="text-gray-300 text-5xl mb-3">🕊️</div>
+                            <p className="text-gray-400 text-xl font-medium">공실</p>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Schedule section */}
+                    {/* Schedule section - 컴팩트 */}
                     {isOccupied && funeralData && (
-                      <div className="flex border-t-4 border-blue-700">
-                        <div className="flex-1 bg-white border-r-2 border-gray-300">
-                          <div className="bg-blue-700 text-white text-center py-3">
-                            <span className="text-xl font-bold">입 관</span>
+                      <div className="flex border-t-2 border-slate-700">
+                        <div className="flex-1 bg-white border-r border-gray-300">
+                          <div className="bg-slate-700 text-white text-center py-3">
+                            <span className="text-base font-bold">입 관</span>
                           </div>
-                          <div className="text-center py-4 text-lg">
+                          <div className="text-center py-3 text-sm">
                             {funeralData.casket_time ? formatScheduleDate(funeralData.casket_time) : '시간미정'}
                           </div>
                         </div>
-                        <div className="flex-1 bg-white border-r-2 border-gray-300">
-                          <div className="bg-blue-700 text-white text-center py-3">
-                            <span className="text-xl font-bold">발 인</span>
+                        <div className="flex-1 bg-white border-r border-gray-300">
+                          <div className="bg-slate-700 text-white text-center py-3">
+                            <span className="text-base font-bold">발 인</span>
                           </div>
-                          <div className="text-center py-4 text-lg">
+                          <div className="text-center py-3 text-sm">
                             {funeralData.funeral_time ? formatScheduleDate(funeralData.funeral_time) : '시간미정'}
                           </div>
                         </div>
                         <div className="flex-1 bg-white">
-                          <div className="bg-blue-700 text-white text-center py-3">
-                            <span className="text-xl font-bold">장 지</span>
+                          <div className="bg-slate-700 text-white text-center py-3">
+                            <span className="text-base font-bold">장 지</span>
                           </div>
-                          <div className="text-center py-4 text-lg px-4">
+                          <div className="text-center py-3 text-sm px-2">
                             {funeralData.burial_location || '미정'}
                           </div>
                         </div>
                       </div>
                     )}
                     
-                    {/* Bottom Footer */}
+                    {/* Bottom Footer - 컴팩트 */}
                     <div className="bg-gray-200 text-gray-700 text-sm">
-                      <div className="px-6 py-1 border-b border-gray-300">
-                        최근 조의메세지(07시) # 황현진 : 삼가 고인의 명복을 빕니다.
-                      </div>
-                      <div className="px-6 py-1">
+                      <div className="px-4 py-2">
                         영동병원장례식장: 충청북도 영동군 영동읍 대학로 106 (설계리, 영동병원), 043-743-4499
                       </div>
                     </div>
@@ -1578,29 +1631,11 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
-
-            {/* 종합안내 카드 - 와이드스크린 형태 */}
-            <div className="space-y-4 mt-6">
-              {[{ name: '종합안내_1층' }, { name: '종합안내_2층' }].map((info, idx) => (
-                <div key={idx} className="bg-white rounded-lg overflow-hidden shadow-xl border-2 border-gray-400">
-                  <div className="bg-gray-600 px-3 py-2">
-                    <h3 className="text-white font-bold text-center">{info.name}</h3>
-                  </div>
-                  <div className="h-48 bg-white flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-gray-400 text-4xl mb-2">📞</div>
-                      <p className="text-gray-600 text-lg font-medium">종합안내</p>
-                      <p className="text-gray-500 text-sm mt-2">043-740-1004</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
         {/* Bottom Footer */}
-        <div className="bg-gray-800 text-white px-8 py-3">
+        <div className="bg-slate-800 text-white px-8 py-3">
           <div className="max-w-screen-2xl mx-auto text-center">
             <p className="text-sm">
               영동병원장례식장 | 충청북도 영동군 영동읍 대학로 106 (설계리, 영동병원) | ☎ 043-743-4493
@@ -1612,14 +1647,14 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex bg-gray-100 min-h-screen">
       <div className="w-64 bg-gray-800 text-white p-4 overflow-y-auto">
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-2">영동병원</h2>
           <p className="text-sm text-gray-400">장례식장 관리시스템</p>
         </div>
         <nav className="space-y-2">
-          <button onClick={() => setCurrentPage('dashboard')} className={`w-full text-left px-4 py-2 rounded ${currentPage === 'dashboard' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>현황판</button>
+          <button onClick={() => setCurrentPage('dashboard')} className={`w-full text-left px-4 py-2 rounded ${currentPage === 'dashboard' ? 'bg-slate-600' : 'hover:bg-gray-700'}`}>현황판</button>
           {roomMenuItems.map(room => {
             const roomKey = room.id;
             const hasData = !!roomFunerals[roomKey];
@@ -1627,7 +1662,7 @@ export default function AdminDashboard() {
               <button 
                 key={room.id} 
                 onClick={() => setCurrentPage(room.id)} 
-                className={`w-full flex items-center justify-between px-4 py-2 rounded ${currentPage === room.id ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
+                className={`w-full flex items-center justify-between px-4 py-2 rounded ${currentPage === room.id ? 'bg-slate-600' : 'hover:bg-gray-700'}`}
               >
                 <span className="text-sm">{room.label}</span>
                 <span className={`w-2 h-2 rounded-full ${hasData ? 'bg-red-400' : 'bg-green-400'}`}></span>
@@ -1640,12 +1675,19 @@ export default function AdminDashboard() {
           <div className="border-t border-gray-700 my-4"></div>
           <button 
             onClick={() => setCurrentPage('saved')} 
-            className={`w-full text-left px-4 py-2 rounded ${currentPage === 'saved' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
+            className={`w-full text-left px-4 py-2 rounded ${currentPage === 'saved' ? 'bg-slate-600' : 'hover:bg-gray-700'}`}
           >
             저장된 장례정보
           </button>
+          <button 
+            onClick={() => router.push('/settings')}
+            className="w-full text-left px-4 py-2 hover:bg-gray-700 rounded flex items-center gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            <span>설정</span>
+          </button>
           <button className="w-full text-left px-4 py-2 hover:bg-gray-700 rounded">환경설정</button>
-          <button onClick={() => setCurrentPage('hygiene')} className={`w-full text-left px-4 py-2 rounded ${currentPage === 'hygiene' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>위생처리관리대장</button>
+          <button onClick={() => setCurrentPage('hygiene')} className={`w-full text-left px-4 py-2 rounded ${currentPage === 'hygiene' ? 'bg-slate-600' : 'hover:bg-gray-700'}`}>위생처리관리대장</button>
         </nav>
       </div>
       <div className="flex-1 flex flex-col overflow-hidden">

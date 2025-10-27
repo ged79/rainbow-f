@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatCurrency, formatDate } from '@flower/shared/utils'
-import type { OrderWithStores, Store } from '@flower/shared/types'
+import { formatCurrency, formatDate } from '@/shared/utils'
+import type { OrderWithStores, Store } from '@/shared/types'
 import toast from 'react-hot-toast'
 import { playNotificationSound } from '@/utils/notification'
 import { 

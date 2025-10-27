@@ -2,9 +2,14 @@
 
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
+  // output: 'standalone', // Windows symlink 에러로 인해 비활성화
   swcMinify: true,
   poweredByHeader: false,
+  
+  // Skip static generation for error pages
+  generateBuildId: async () => {
+    return 'admin-build'
+  },
   
   images: {
     remotePatterns: [
@@ -23,8 +28,17 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: '2.0.0',
   },
   
-  webpack: (config, { dev }) => {
-    if (!dev) {
+  webpack: (config, { isServer }) => {
+    // Fix 'self is not defined' error
+    if (isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        canvas: false,
+        encoding: false,
+      }
+    }
+    
+    if (!isServer) {
       config.optimization.minimize = true;
       config.optimization.splitChunks = {
         chunks: 'all',
@@ -45,10 +59,6 @@ const nextConfig = {
           }
         }
       };
-    }
-    
-    if (dev) {
-      config.devtool = 'source-map';
     }
     
     return config;

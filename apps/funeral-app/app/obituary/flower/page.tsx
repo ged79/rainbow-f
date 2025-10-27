@@ -1,442 +1,175 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
+import { ArrowLeft, Flower, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
-import { ArrowLeft, Phone } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
-interface FlowerProduct {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+interface Product {
   id: string
   name: string
-  price: string
+  price: number
   image: string
   description: string
+  subcategory: string
 }
 
-const flowerProducts: FlowerProduct[] = [
-  {
-    id: '60',
-    name: '60송이 근조화환',
-    price: '95,000원',
-    image: '/60송이 근조화환.jpg',
-    description: '정성을 담은 기본형 근조화환'
-  },
-  {
-    id: '80', 
-    name: '80송이 근조화환',
-    price: '115,000원',
-    image: '/80송이 근조화환.jpg', 
-    description: '품격있는 고급형 근조화환'
-  }
-]
-
-export default function ObituaryFlowerPage() {
-  const [selectedProduct, setSelectedProduct] = useState<FlowerProduct | null>(null)
-  const [orderData, setOrderData] = useState({
-    sender_name: '',
-    sender_phone: '',
-    recipient_relation: '상주',
-    recipient_name: '',
-    ribbon_message: '삼가 故人의 冥福을 빕니다',
-    ribbon_sender_type: '주문자와 동일',
-    ribbon_sender_custom: '',
-    customer_name_type: '주문자와 동일',
-    customer_name: '',
-    customer_phone_type: '주문자와 동일',
-    customer_phone: '',
-    payment_method: 'card'
-  })
-  const [announcementData, setAnnouncementData] = useState<any>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const searchParams = useSearchParams()
-  const roomId = searchParams.get('room')
+export default function FuneralFlowerPage() {
+  const [products, setProducts] = useState<Record<string, Product[]>>({})
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
-    // sessionStorage에서 부고 데이터 가져오기
-    const storedData = sessionStorage.getItem('obituaryData')
-    if (storedData) {
-      const data = JSON.parse(storedData)
-      setAnnouncementData(data)
-      
-      if (data.family && data.family.length > 0) {
-        const chiefMourner = data.family.find((m: any) => m.relation === '상주')
-        if (chiefMourner) {
-          setOrderData(prev => ({
-            ...prev,
-            recipient_name: chiefMourner.name,
-            recipient_relation: chiefMourner.relation
-          }))
-        }
-      }
-    }
-  }, [roomId])
+    loadProducts()
+  }, [])
 
-  const submitOrder = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedProduct) return
-    
-    setIsSubmitting(true)
-    
+  const loadProducts = async () => {
     try {
-      const orderPayload = {
-        funeral_id: null,
-        deceased_name: announcementData?.deceased?.name || announcementData?.deceasedName || null,
-        product_name: selectedProduct.name,
-        product_price: selectedProduct.price,
-        sender_name: orderData.sender_name,
-        sender_phone: orderData.sender_phone,
-        recipient_relation: orderData.recipient_relation,
-        recipient_name: orderData.recipient_name,
-        ribbon_message: orderData.ribbon_message,
-        ribbon_sender_type: orderData.ribbon_sender_type,
-        ribbon_sender_custom: orderData.ribbon_sender_custom,
-        customer_name_type: orderData.customer_name_type,
-        customer_name: orderData.customer_name,
-        customer_phone_type: orderData.customer_phone_type,
-        customer_phone: orderData.customer_phone,
-        payment_method: orderData.payment_method,
-        delivery_address: '영동병원장례식장 특실 5빈소 (5층)'
-      }
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .in('category_1', ['장례식', '장례'])
+        .eq('is_active', true)
+        .order('category_2')
+        .order('sort_order')
+
+      if (error) throw error
+
+      const grouped: Record<string, Product[]> = {}
       
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderPayload)
+      data?.forEach(product => {
+        const subcategory = product.category_2 || '기타'
+        if (!grouped[subcategory]) {
+          grouped[subcategory] = []
+        }
+        grouped[subcategory].push({
+          id: product.id,
+          name: product.display_name,
+          price: product.customer_price || product.price,
+          image: product.image_url || '/placeholder.jpg',
+          description: product.description || '',
+          subcategory: product.category_2
+        })
       })
       
-      if (!response.ok) {
-        throw new Error('주문 접수에 실패했습니다')
-      }
-      
-      alert('주문이 성공적으로 접수되었습니다!')
-      setSelectedProduct(null)
-      setOrderData({
-        sender_name: '',
-        sender_phone: '',
-        recipient_relation: '상주',
-        recipient_name: orderData.recipient_name,
-        ribbon_message: '삼가 故人의 冥福을 빕니다',
-        ribbon_sender_type: '주문자와 동일',
-        ribbon_sender_custom: '',
-        customer_name_type: '주문자와 동일',
-        customer_name: '',
-        customer_phone_type: '주문자와 동일',
-        customer_phone: '',
-        payment_method: 'card'
-      })
+      setProducts(grouped)
     } catch (error) {
-      alert('주문 중 오류가 발생했습니다. 다시 시도해주세요.')
+      console.error('Failed to load products:', error)
     } finally {
-      setIsSubmitting(false)
+      setLoading(false)
     }
+  }
+
+  const handleOrderClick = (productId: string) => {
+    // Get obituary data from sessionStorage
+    const obituaryData = sessionStorage.getItem('obituaryPreview')
+    const parsed = obituaryData ? JSON.parse(obituaryData) : {}
+    const room = parsed?.room || '빈소'
+    const deceasedName = parsed?.deceasedName || ''
+    
+    // Use environment variable for homepage URL (defaults to localhost for development)
+    const homepageUrl = process.env.NEXT_PUBLIC_HOMEPAGE_URL || 'http://localhost:3000'
+    
+    // Redirect to homepage with funeral context and auto-open order modal
+    window.location.href = `${homepageUrl}/order?id=${productId}&autoOrder=true&funeral=true&room=${encodeURIComponent(room)}&deceased=${encodeURIComponent(deceasedName)}`
+  }
+
+  const categoryOrder = Object.keys(products).sort((a, b) => {
+    if (a.includes('화환') && !b.includes('화환')) return -1
+    if (!a.includes('화환') && b.includes('화환')) return 1
+    return (products[b]?.length || 0) - (products[a]?.length || 0)
+  })
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8 pb-16">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-gray-200 rounded-lg h-64"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* 헤더 - 부고장과 동일 */}
-      <div className="fixed top-0 left-0 right-0 bg-white border-b-2 border-gray-200 py-4 z-50">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="text-xs text-gray-600">의료법인 조윤의료재단</div>
-          <div className="text-xl font-bold text-gray-800">영동병원장례식장</div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-[#2c3e50] border-b-2 border-slate-300 shadow-md sticky top-0 z-50 overflow-hidden py-2">
+        <div className="max-w-7xl mx-auto cursor-pointer" onClick={() => router.push('/obituary/modern')}>
+          <img 
+            src="/header.png" 
+            alt="영동병원장례식장" 
+            className="w-full h-auto transform scale-150"
+            style={{ transformOrigin: 'center' }}
+          />
         </div>
       </div>
-      
-      <div className="max-w-2xl mx-auto pb-20 mt-20">
-        {/* 상품 목록 */}
-        <div className="p-6">
-          <div className="space-y-4">
-            {flowerProducts.map((product) => (
-              <div key={product.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm flex">
-                <div className="w-1/2 h-48 bg-gray-100 relative overflow-hidden">
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                <div className="w-1/2 p-4 flex flex-col justify-center">
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">{product.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                  <span className="text-xl font-bold text-gray-900 block mb-3">{product.price}</span>
-                  <button
-                    onClick={() => setSelectedProduct(product)}
-                    className="bg-slate-900 text-white px-4 py-2 rounded hover:bg-slate-800 transition-colors text-sm"
-                  >
-                    주문하기
-                  </button>
-                </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8 pb-16">
+        {categoryOrder.length === 0 ? (
+          <div className="text-center py-16">
+            <Flower className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">상품을 준비 중입니다</p>
+          </div>
+        ) : (
+          categoryOrder.map((subCategory) => (
+            <div key={subCategory} className="mb-12">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{subCategory}</h3>
+                <p className="text-gray-600 text-sm">
+                  {products[subCategory]?.length || 0}개 상품
+                </p>
               </div>
-            ))}
 
-            <div className="p-4 bg-gray-50 rounded-lg text-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">더 많은 근조화환이 필요하신가요?</h3>
-              <p className="text-gray-600 text-sm mb-4">다양한 가격대와 디자인의 근조화환을 확인하세요</p>
-              <a
-                href="https://rainbow-f.netlify.app/category/funeral"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-slate-900 text-white px-6 py-3 rounded hover:bg-slate-800 transition-colors inline-block"
-              >
-                전체 상품 보기
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 하단 고정 버튼 - 부고장과 동일한 스타일 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl z-50">
-        <div className="max-w-2xl mx-auto">
-          <div className="grid grid-cols-2 divide-x">
-            <Link 
-              href="/obituary/modern"
-              className="flex flex-col items-center gap-2 py-4 hover:bg-gray-50 transition-colors"
-            >
-              <ArrowLeft size={24} className="text-gray-600" />
-              <span className="text-sm font-medium text-gray-900">돌아가기</span>
-            </Link>
-            <Link 
-              href="/obituary/flower/check"
-              className="flex flex-col items-center gap-2 py-4 hover:bg-gray-50 transition-colors"
-            >
-              <Phone size={24} className="text-blue-600" />
-              <span className="text-sm font-medium text-gray-900">주문조회</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* 주문 모달 */}
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-md h-[90vh] overflow-y-auto">
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">영동병원장례식장</h3>
-              
-              <form onSubmit={submitOrder} className="space-y-3">
-                {/* 주문자 카드 */}
-                <div className="bg-gray-50 p-3 rounded-lg border">
-                  <h4 className="font-medium text-gray-900 mb-2">주문자</h4>
-                  <div className="space-y-2">
-                    <input 
-                      type="text" 
-                      required
-                      value={orderData.sender_name}
-                      onChange={(e) => setOrderData({...orderData, sender_name: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded text-sm" 
-                      placeholder="이름을 입력해주세요" 
-                    />
-                    <input 
-                      type="tel" 
-                      required
-                      value={orderData.sender_phone}
-                      onChange={(e) => setOrderData({...orderData, sender_phone: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded text-sm" 
-                      placeholder="예)010-0000-0000" 
-                    />
-                  </div>
-                </div>
-
-                {/* 배송지/상품정보 카드 */}
-                <div className="bg-gray-50 p-3 rounded-lg border">
-                  <h4 className="font-medium text-gray-900 mb-2">배송지/상품정보</h4>
-                  
-                  <div className="bg-white p-2 rounded mb-3 text-sm border">
-                    <div className="font-medium text-gray-900">
-                      {announcementData?.schedule?.room || '특실 5빈소'} 
-                      ({announcementData?.schedule?.floor || '5층'})
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">충청북도 영동군 영동읍 대학로 106 (설계리, 영동병원)</div>
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label className="block text-xs text-gray-700 mb-1">받으시는 분</label>
-                    <div className="grid grid-cols-2 gap-1">
-                      <select
-                        value={orderData.recipient_relation}
-                        onChange={(e) => {
-                          const relation = e.target.value;
-                          const member = announcementData?.family?.find((m: any) => m.relation === relation);
-                          setOrderData({
-                            ...orderData, 
-                            recipient_relation: relation,
-                            recipient_name: member?.name || ''
-                          });
-                        }}
-                        className="p-2 border border-gray-300 rounded text-sm"
-                      >
-                        {announcementData?.family?.map((member: any, idx: number) => (
-                          <option key={idx} value={member.relation}>{member.relation}</option>
-                        )) || (
-                          <>
-                            <option value="상주">상주</option>
-                            <option value="장남">장남</option>
-                            <option value="차남">차남</option>
-                            <option value="장녀">장녀</option>
-                          </>
-                        )}
-                      </select>
-                      <input 
-                        type="text" 
-                        required
-                        value={orderData.recipient_name}
-                        onChange={(e) => setOrderData({...orderData, recipient_name: e.target.value})}
-                        className="p-2 border border-gray-300 rounded text-sm" 
-                        placeholder="이름" 
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products[subCategory]?.map((product) => (
+                  <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
+                    <div className="aspect-square bg-gray-100 relative">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-1">보내는 분</label>
-                      <select 
-                        value={orderData.ribbon_sender_type}
-                        onChange={(e) => setOrderData({...orderData, ribbon_sender_type: e.target.value})}
-                        className="w-full p-2 border border-gray-300 rounded text-sm"
-                      >
-                        <option>주문자와 동일</option>
-                        <option>직접입력</option>
-                      </select>
-                      {orderData.ribbon_sender_type === '직접입력' && (
-                        <input 
-                          type="text" 
-                          value={orderData.ribbon_sender_custom}
-                          onChange={(e) => setOrderData({...orderData, ribbon_sender_custom: e.target.value})}
-                          className="w-full p-2 border border-gray-300 rounded text-sm mt-1" 
-                          placeholder="보내는 분 이름을 입력해주세요" 
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-1">리본 문구</label>
-                      <select 
-                        value={orderData.ribbon_message}
-                        onChange={(e) => setOrderData({...orderData, ribbon_message: e.target.value})}
-                        className="w-full p-2 border border-gray-300 rounded text-sm"
-                      >
-                        <option>삼가 故人의 冥福을 빕니다</option>
-                        <option>깊은 애도를 표합니다</option>
-                        <option>그리운 마음을 전합니다</option>
-                        <option>편안히 잠드소서</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="border-t pt-2">
-                      <div className="flex justify-between text-lg font-bold text-blue-600">
-                        <span>총 결제금액</span>
-                        <span>{selectedProduct.price}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 결제 카드 */}
-                <div className="bg-gray-50 p-3 rounded-lg border">
-                  <h4 className="font-medium text-gray-900 mb-2">결제</h4>
-                  
-                  <div className="mb-3">
-                    <label className="block text-xs text-gray-700 mb-1">결제방법</label>
-                    <div className="flex space-x-2">
+                    <div className="p-4">
+                      <h4 className="font-semibold text-gray-900 mb-2 line-clamp-2">{product.name}</h4>
+                      <p className="text-purple-700 font-bold text-lg mb-3">
+                        {product.price.toLocaleString()}원
+                      </p>
                       <button
-                        type="button"
-                        onClick={() => setOrderData({...orderData, payment_method: 'card'})}
-                        className={`flex-1 py-2 border rounded text-sm ${
-                          orderData.payment_method === 'card' 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                            : 'border-gray-300 text-gray-700'
-                        }`}
+                        onClick={() => handleOrderClick(product.id)}
+                        className="w-full bg-slate-700 hover:bg-slate-800 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                       >
-                        신용카드
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOrderData({...orderData, payment_method: 'virtual'})}
-                        className={`flex-1 py-2 border rounded text-sm ${
-                          orderData.payment_method === 'virtual' 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                            : 'border-gray-300 text-gray-700'
-                        }`}
-                      >
-                        가상계좌
+                        주문하기
+                        <ExternalLink size={16} />
                       </button>
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-xs text-gray-700 mb-1">전화번호</label>
-                      <select 
-                        value={orderData.customer_phone_type}
-                        onChange={(e) => setOrderData({...orderData, customer_phone_type: e.target.value})}
-                        className="w-full p-2 border border-gray-300 rounded mb-1 text-sm"
-                      >
-                        <option>주문자와 동일</option>
-                        <option>직접입력</option>
-                      </select>
-                      {orderData.customer_phone_type === '직접입력' && (
-                        <input 
-                          type="tel" 
-                          required
-                          value={orderData.customer_phone}
-                          onChange={(e) => setOrderData({...orderData, customer_phone: e.target.value})}
-                          className="w-full p-2 border border-gray-300 rounded text-sm" 
-                          placeholder="예) 01012345678" 
-                        />
-                      )}
-                      {orderData.customer_phone_type === '주문자와 동일' && (
-                        <div className="w-full p-2 border border-gray-300 rounded bg-white text-gray-600 text-sm">
-                          {orderData.sender_phone || '주문자 전화번호 입력 후 자동 입력됩니다'}
-                        </div>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">* 위 핸드폰번호로 주문정보와 배송확인 사진을 보내드립니다.</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* 약관 동의 */}
-                <div className="space-y-1">
-                  <label className="flex items-center text-sm">
-                    <input type="checkbox" className="mr-2" required />
-                    <span>전체 동의</span>
-                  </label>
-                  <label className="flex items-center justify-between text-xs">
-                    <div className="flex items-center">
-                      <input type="checkbox" className="mr-1" required />
-                      <span>개인정보 제3자 제공 동의(필수)</span>
-                    </div>
-                  </label>
-                </div>
-                
-                <div className="pt-3 border-t">
-                  <div className="flex space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProduct(null)}
-                      className="flex-1 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm"
-                      disabled={isSubmitting}
-                    >
-                      취소
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold disabled:opacity-50 text-sm"
-                    >
-                      🛒 {isSubmitting ? '주문 중...' : '주문결제'}
-                    </button>
-                  </div>
-                </div>
-              </form>
+                ))}
+              </div>
             </div>
-          </div>
+          ))
+        )}
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-slate-800 text-white py-2 border-t-2 border-slate-300 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-sm">
+            영동병원장례식장 | 충청북도 영동군 영동읍 대학로 106 | ☎ 043-743-4493
+          </p>
         </div>
-      )}
+      </div>
     </div>
   )
 }

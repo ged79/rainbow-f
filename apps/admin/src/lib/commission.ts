@@ -2,8 +2,8 @@
  * 수수료 계산 및 정산 로직
  */
 
-import type { Order, Store } from '@flower/shared/types'
-import { BUSINESS_RULES } from '@flower/shared/constants'
+import type { Order, Store } from '@/shared/types'
+import { BUSINESS_RULES } from '@/shared/constants'
 
 // 수수료 계산
 export function calculateCommission(order: Order, store: Store): number {
