@@ -45,3 +45,7 @@ coverage
 
 .vercel
 "*.backup" 
+
+# Local Netlify folder
+.netlify
+homepage-backup/

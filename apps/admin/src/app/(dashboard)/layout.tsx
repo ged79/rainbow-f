@@ -100,13 +100,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
     { name: '미배정 주문', href: '/orders/assignment', icon: AlertTriangle, badge: unassignedCount },
-    { name: '통합주문관리', href: '/unified-orders', icon: Package },
-    { name: '기존 주문', href: '/orders', icon: ClipboardList },
+    { name: '화원배정관리', href: '/unified-orders', icon: Package },
+    { name: '완료 주문', href: '/orders', icon: ClipboardList },
     { name: '상품 관리', href: '/products', icon: ShoppingBag },
     { name: '가맹점 관리', href: '/florists', icon: Store },
     { name: '장례식장 관리', href: '/funeral-homes', icon: Users },
-    { name: '정산 관리', href: '/accounting', icon: Calculator },
-    { name: '수익 분석', href: '/accounting/settlements', icon: TrendingUp },
+    { name: '수익 분석', href: '/accounting', icon: Calculator },
+    { name: '정산 관리', href: '/accounting/settlements', icon: TrendingUp },
     { name: '공지사항', href: '/notices', icon: Megaphone },
     { name: '설정', href: '/settings', icon: Settings },
   ]

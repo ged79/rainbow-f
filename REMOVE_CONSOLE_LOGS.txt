@@ -1,0 +1,50 @@
+// Find and remove these lines from page.tsx:
+
+Line 95-96: Remove
+console.log('[DEBUG] Fetching points for:', phone)
+console.log('[DEBUG] API Response status:', res.status)
+
+Line 99: Remove  
+console.log('[DEBUG] 401 - Not authenticated')
+
+Line 107: Remove
+console.log('[DEBUG] Points data:', data)
+
+Line 110: Remove
+console.log(`Found ${data.count} coupons, total: ${data.totalPoints} points`)
+
+Line 184: Remove
+console.log('Auto-loaded referrer:', savedReferrer)
+
+Line 194: Remove
+console.log('Direct order product:', orderProduct)
+
+Line 232: Remove
+console.log('Product loaded from ID:', foundProduct)
+
+Line 256: Remove
+console.error('Product not found:', productId)
+
+Line 260: Remove
+console.error('Failed to load product:', error)
+
+Line 263: Remove
+console.error('No product ID provided')
+
+Line 365: Remove
+console.log('Order submitted with discount:', discountAmount, 'usePoints:', usePoints)
+
+Line 382: Remove
+console.log('[DEBUG pendingOrder]', {...})
+
+Line 391: Remove
+console.log('Payment success, preparing order with discount:', discountAmount)
+
+Line 426: Remove
+console.log('[DEBUG finalOrderData]', {...})
+
+Line 447: Remove
+console.error('주문 처리 오류:', error)
+
+Line 1851: Remove
+console.log('Modal closing with product:', product)

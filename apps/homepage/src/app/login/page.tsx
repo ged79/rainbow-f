@@ -33,24 +33,27 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // ✅ 쿠키 수신
         body: JSON.stringify(formData)
       })
 
       const data = await res.json()
-      console.log('Login response:', data) // 디버그용
+      console.log('Login response:', data)
 
       if (!res.ok) {
         alert(data.error || '로그인 실패')
         return
       }
 
-      // API 응답에 맞게 수정
       if (data.user) {
+        // ✅ 마스킹되지 않은 원본 전화번호 저장 필요
+        const cleanPhone = formData.phone.replace(/-/g, '')
         localStorage.setItem('flower-member', JSON.stringify({
           id: data.user.id,
           name: data.user.name,
-          phone: data.user.phone,
-          email: data.user.email
+          phone: cleanPhone, // 원본 전화번호
+          email: data.user.email,
+          accessToken: data.accessToken // 토큰 저장
         }))
       }
 

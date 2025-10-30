@@ -5,9 +5,10 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import EmotionalNavbar from '../../components/EmotionalNavbar'
 import PaymentModal from '../../components/PaymentModal'
+import SecureOrderModal from '../../components/SecureOrderModal'
 import ProductImageGallery from '../../components/ProductImageGallery'
 import Button from '../../components/ui/Button'
-import { Heart, ShoppingCart, Minus, Plus, MapPin, Calendar, Clock, Gift } from 'lucide-react'
+import { Heart, ShoppingCart, Minus, Plus, MapPin, Calendar, Clock, Gift, LogIn } from 'lucide-react'
 import { getProductFromDB, getProduct } from '../../lib/products'
 import { getProductById } from '../../services/productService'
 import type { ProductType, CreateOrderInput, HomepageProduct } from '../../types'
@@ -18,59 +19,23 @@ declare global {
   }
 }
 
-// 상품 종류별 리본 문구 - 함수를 컴포넌트 밖으로 이동
 const getRibbonMessages = (productType: ProductType) => {
   switch(productType) {
     case '근조화환':
-      return [
-        '삼가 고인의 명복을 빕니다',
-        '깊은 애도를 표합니다',
-        '그리운 마음을 전합니다',
-        '편안히 잠드소서'
-      ]
+      return ['삼가 고인의 명복을 빕니다', '깊은 애도를 표합니다', '그리운 마음을 전합니다', '편안히 잠드소서']
     case '축하화환':
-      return [
-        '개업을 축하드립니다',
-        '번창하시길 바랍니다',
-        '대박나세요',
-        '축하합니다'
-      ]
+      return ['개업을 축하드립니다', '번창하시길 바랍니다', '대박나세요', '축하합니다']
     case '꽃다발':
-      return [
-        '사랑합니다',
-        '감사합니다',
-        '축하합니다',
-        '행복하세요'
-      ]
+      return ['사랑합니다', '감사합니다', '축하합니다', '행복하세요']
     case '꽃바구니':
-      return [
-        '빠른 쾌유를 바랍니다',
-        '건강하세요',
-        '감사합니다',
-        '축하합니다'
-      ]
+      return ['빠른 쾌유를 바랍니다', '건강하세요', '감사합니다', '축하합니다']
     case '관엽화분':
-      return [
-        '새로운 시작을 응원합니다',
-        '번창하시길 바랍니다',
-        '행운을 빕니다',
-        '축하합니다'
-      ]
+      return ['새로운 시작을 응원합니다', '번창하시길 바랍니다', '행운을 빕니다', '축하합니다']
     case '서양란':
     case '동양란':
-      return [
-        '축하합니다',
-        '감사합니다',
-        '번영하시길 바랍니다',
-        '사랑합니다'
-      ]
+      return ['축하합니다', '감사합니다', '번영하시길 바랍니다', '사랑합니다']
     default:
-      return [
-        '축하합니다',
-        '감사합니다',
-        '사랑합니다',
-        '행복하세요'
-      ]
+      return ['축하합니다', '감사합니다', '사랑합니다', '행복하세요']
   }
 }
 
@@ -81,16 +46,17 @@ const OrderPage = () => {
   const [product, setProduct] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isWishlisted, setIsWishlisted] = useState(false)
-  const [productReviews, setProductReviews] = useState<any[]>([])  // 상품 리뷰
+  const [productReviews, setProductReviews] = useState<any[]>([])
   const searchParams = useSearchParams()
   
-  // funeral-app에서 전달된 파라미터 확인
   const autoOrder = searchParams.get('autoOrder') === 'true'
   const isFuneral = searchParams.get('funeral') === 'true'
+  const funeralId = searchParams.get('funeral_id')
   const funeralRoom = searchParams.get('room')
   const deceasedName = searchParams.get('deceased')
+  const funeralAddress = searchParams.get('address')
+  const funeralPostal = searchParams.get('postal')
   
-  // 상품명에서 상품 타입 추출
   const getProductType = (productName: string): ProductType => {
     if (productName.includes('근조') || productName.includes('장례')) return '근조화환'
     if (productName.includes('축하') || productName.includes('개업')) return '축하화환'
@@ -99,21 +65,19 @@ const OrderPage = () => {
     if (productName.includes('서양란') || productName.includes('호접란')) return '서양란'
     if (productName.includes('동양란')) return '동양란'
     if (productName.includes('화분') || productName.includes('관엽')) return '관엽화분'
-    return '축하화환' // 기본값
+    return '축하화환'
   }
   
-  // 쿠폰/포인트 관련 state
   const [availableCoupons, setAvailableCoupons] = useState([])
   const [totalPoints, setTotalPoints] = useState(0)
   const [usePoints, setUsePoints] = useState(false)
   const [discountAmount, setDiscountAmount] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   
-  // 추천인 관련 state
   const [referrerPhone, setReferrerPhone] = useState('')
   const [showReferralBenefit, setShowReferralBenefit] = useState(false)
-  const [autoReferrer, setAutoReferrer] = useState(false) // 자동 추천인 여부
+  const [autoReferrer, setAutoReferrer] = useState(false)
   
-  // 전화번호 포맷팅 함수
   const formatPhoneNumber = (value: string) => {
     const numbers = value.replace(/[^\d]/g, '')
     if (numbers.length <= 3) return numbers
@@ -124,14 +88,8 @@ const OrderPage = () => {
   const handlePhoneChange = (field: string, value: string) => {
     const formatted = formatPhoneNumber(value)
     setOrderData((prev: any) => ({ ...prev, [field]: formatted }))
-    
-    // 주문자 전화번호 입력 시 포인트 조회
-    if (field === 'customer_phone' && formatted.length === 13) { // 010-1234-5678 형식
-      fetchAvailablePoints(formatted)
-    }
   }
   
-  // 상품 리뷰 가져오기
   const fetchProductReviews = async (productName: string) => {
     try {
       const res = await fetch(`/api/products/reviews?name=${encodeURIComponent(productName)}`)
@@ -144,23 +102,44 @@ const OrderPage = () => {
     }
   }
 
-  // 보유 포인트 조회
   const fetchAvailablePoints = async (phone: string) => {
     try {
-      const res = await fetch(`/api/coupons/available?phone=${phone}`)
+      console.log('[DEBUG] Fetching points for:', phone)
+      const res = await fetch(`/api/coupons/available?phone=${phone}`, {
+        credentials: 'include'
+      })
+      
+      console.log('[DEBUG] API Response status:', res.status)
+      
+      if (res.status === 401) {
+        console.log('[DEBUG] 401 - Not authenticated')
+        setTotalPoints(0)
+        setAvailableCoupons([])
+        setIsLoggedIn(false)
+        return
+      }
+      
       if (res.ok) {
         const data = await res.json()
+        console.log('[DEBUG] Points data:', data)
         setAvailableCoupons(data.coupons || [])
         setTotalPoints(data.totalPoints || 0)
+        setIsLoggedIn(true)
         console.log(`Found ${data.count} coupons, total: ${data.totalPoints} points`)
       }
     } catch (error) {
       console.error('Failed to fetch points:', error)
+      setTotalPoints(0)
+      setIsLoggedIn(false)
     }
   }
 
-  // 포인트 사용 토글
   const togglePoints = () => {
+    if (!isLoggedIn) {
+      alert('포인트는 회원만 사용할 수 있습니다. 로그인 해주세요.')
+      return
+    }
+    
     if (totalPoints === 0) return
     
     const newUsePoints = !usePoints
@@ -168,7 +147,6 @@ const OrderPage = () => {
     
     if (newUsePoints && product) {
       const baseAmount = product.price * quantity
-      // 포인트는 최대 주문금액까지만 사용 가능
       const maxDiscount = Math.min(totalPoints, baseAmount)
       setDiscountAmount(maxDiscount)
     } else {
@@ -176,13 +154,9 @@ const OrderPage = () => {
     }
   }
 
-
-  
-  // 주소 관련 state
   const [scriptLoaded, setScriptLoaded] = useState(false)
   const [detailAddress, setDetailAddress] = useState('')
   
-  // 주문 데이터
   const [orderData, setOrderData] = useState<CreateOrderInput>({
     customer_name: '',
     customer_phone: '',
@@ -199,7 +173,7 @@ const OrderPage = () => {
     },
     delivery_date: new Date().toISOString().split('T')[0],
     delivery_time: '즉시배송',
-    product_type: '근조화환',  // No 'as' needed since it's CreateOrderInput
+    product_type: '근조화환',
     product_name: '',
     product_price: 0,
     product_quantity: 1,
@@ -210,22 +184,23 @@ const OrderPage = () => {
     additional_fee_reason: ''
   })
 
-  // 초기 로드 시 포인트 확인 및 추천인 확인
   useEffect(() => {
-    // 로그인 사용자 또는 localStorage에 전화번호가 있으면 포인트 조회
     const memberSession = localStorage.getItem('flower-member')
     if (memberSession) {
       try {
         const member = JSON.parse(memberSession)
         if (member.phone) {
+          setIsLoggedIn(true)
           fetchAvailablePoints(member.phone)
         }
       } catch (e) {
         console.error('Failed to parse member session:', e)
+        setIsLoggedIn(false)
       }
+    } else {
+      setIsLoggedIn(false)
     }
     
-    // localStorage에서 추천인 정보 확인
     const savedReferrer = localStorage.getItem('referrer_phone')
     if (savedReferrer) {
       setReferrerPhone(savedReferrer)
@@ -235,17 +210,15 @@ const OrderPage = () => {
     }
   }, [])
 
-  // DB에서 상품 정보 가져오기
   useEffect(() => {
     const loadProduct = async () => {
-      // 먼저 directOrder 데이터 확인
       const directOrderData = localStorage.getItem('directOrder')
       if (directOrderData) {
         try {
           const orderProduct = JSON.parse(directOrderData)
+          console.log('Direct order product:', orderProduct)
           setProduct(orderProduct)
           setQuantity(orderProduct.quantity || 1)
-          
           
           setOrderData(prev => ({
             ...prev,
@@ -255,10 +228,7 @@ const OrderPage = () => {
             special_instructions: orderProduct.message || ''
           }))
           
-          // 상품 리뷰 가져오기
           fetchProductReviews(orderProduct.name)
-          
-          // directOrder 데이터 사용 후 삭제
           localStorage.removeItem('directOrder')
           setIsLoading(false)
           return
@@ -267,20 +237,15 @@ const OrderPage = () => {
         }
       }
       
-      // directOrder가 없으면 ID로 상품 가져오기
       const productId = searchParams.get('id')
       if (productId) {
         try {
           let foundProduct = null
-          
-          // UUID 형식인지 확인 (DB 상품)
           const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)
           
           if (isUUID) {
-            // UUID면 DB에서 가져오기
             foundProduct = await getProductById(productId)
           } else {
-            // 문자열 ID면 정적 데이터에서 가져오기
             const staticProduct = getProduct(productId)
             if (staticProduct) {
               foundProduct = staticProduct
@@ -288,9 +253,9 @@ const OrderPage = () => {
           }
           
           if (foundProduct) {
+            console.log('Product loaded from ID:', foundProduct)
             setProduct(foundProduct)
             
-            // funeral 정보 적용
             const productType = getProductType(foundProduct.name)
             const initialOrderData: any = {
               ...orderData,
@@ -299,19 +264,15 @@ const OrderPage = () => {
               product_type: productType
             }
             
-            // funeral-app에서 온 경우 추가 정보 설정
             if (isFuneral && deceasedName) {
               initialOrderData.recipient_name = deceasedName
               initialOrderData.special_instructions = funeralRoom ? `${funeralRoom} 배송` : ''
-              // 근조화환 리본 문구 기본값
               if (productType === '근조화환') {
                 initialOrderData.ribbon_text = '삼가 고인의 명복을 빕니다'
               }
             }
             
             setOrderData(initialOrderData)
-            
-            // 상품 리뷰 가져오기
             fetchProductReviews(foundProduct.name)
           } else {
             console.error('Product not found:', productId)
@@ -328,30 +289,15 @@ const OrderPage = () => {
     loadProduct()
   }, [searchParams])
   
-  // autoOrder 파라미터가 있으면 상품 로드 후 자동으로 결제 모달 열기
   useEffect(() => {
     if (autoOrder && product && !isLoading) {
-      // pendingOrder 데이터 미리 생성
-      const pendingOrderData = {
-        ...orderData,
-        product_id: product.id,
-        product_image: product.image_url || product.image || '/placeholder.jpg',
-        product_quantity: quantity,
-        product_price: product.price,
-        product_name: product.name,
-        total_amount: product.price * quantity,
-        discount_amount: 0
-      }
-      localStorage.setItem('pendingOrder', JSON.stringify(pendingOrderData))
-      
-      // 바로 결제 모달 열기
+      // autoOrder일 때는 SecureOrderModal을 바로 열기
       setTimeout(() => {
-        setShowPaymentModal(true)
+        setShowPayment(true)
       }, 300)
     }
-  }, [autoOrder, product, isLoading, orderData, quantity])
+  }, [autoOrder, product, isLoading])
   
-  // Daum Postcode script 로드
   useEffect(() => {
     const script = document.createElement('script')
     script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
@@ -386,8 +332,8 @@ const OrderPage = () => {
           recipient_address: {
             sido,
             sigungu,
-            dong: roadAddress,  // 도로명 주소를 dong에 저장
-            detail: '',  // 상세주소는 사용자가 입력
+            dong: roadAddress,
+            detail: '',
             postal_code
           }
         })
@@ -415,16 +361,13 @@ const OrderPage = () => {
       return
     }
     
-    // 상세주소 필수 체크
     if (!detailAddress || detailAddress.trim() === '') {
       alert('상세주소를 입력해주세요. (예: 101동 202호, 2층, ○○아파트 등)')
       return
     }
     
-    // 즉시배송 선택 시 현재 날짜/시간 자동 설정
     if (orderData.delivery_time === '즉시배송') {
       const now = new Date()
-      // 한국 시간으로 변환
       const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}))
       orderData.delivery_date = koreaTime.toISOString().split('T')[0]
       const hours = koreaTime.getHours().toString().padStart(2, '0')
@@ -439,27 +382,27 @@ const OrderPage = () => {
     
     console.log('Order submitted with discount:', discountAmount, 'usePoints:', usePoints)
     
-const pendingOrderData = {
-  ...orderData,
-  recipient_address: {
-    ...orderData.recipient_address,
-    detail: detailAddress
-  },
-  product_id: product.id,
-  product_image: product.image_url || product.image || '/placeholder.jpg',
-  product_quantity: quantity,
-  product_price: product.price,
-  product_name: product.name,
-  total_amount: product.price * quantity - discountAmount,
-  discount_amount: discountAmount,
-  referrerPhone: referrerPhone
-}
+    const pendingOrderData = {
+      ...orderData,
+      recipient_address: {
+        ...orderData.recipient_address,
+        detail: detailAddress
+      },
+      product_id: product.id,
+      product_image: product.image_url || product.image || '/placeholder.jpg',
+      product_quantity: quantity,
+      product_price: product.price,
+      product_name: product.name,
+      total_amount: product.price * quantity - discountAmount,
+      discount_amount: discountAmount,
+      referrerPhone: referrerPhone
+    }
 
-console.log('[DEBUG pendingOrder]', {
-  product_name: product.name,
-  product_image: product.image_url || product.image,
-  product_id: product.id
-})
+    console.log('[DEBUG pendingOrder]', {
+      product_name: product.name,
+      product_image: product.image_url || product.image,
+      product_id: product.id
+    })
     
     localStorage.setItem('pendingOrder', JSON.stringify(pendingOrderData))
     setShowPaymentModal(true)
@@ -468,10 +411,9 @@ console.log('[DEBUG pendingOrder]', {
   const handlePaymentSuccess = async (transactionId: string) => {
     console.log('Payment success, preparing order with discount:', discountAmount)
     
-    // 상세주소를 포함한 주소 객체 생성
     const fullAddress = {
       ...orderData.recipient_address,
-      detail: detailAddress  // 상세주소로 업데이트
+      detail: detailAddress
     }
     
     const finalOrderData = {
@@ -481,12 +423,12 @@ console.log('[DEBUG pendingOrder]', {
       payment_status: 'completed',
       referrerPhone: referrerPhone,
       customerPhone: orderData.customer_phone,
-      customer_phone: orderData.customer_phone,  // Ensure both fields
+      customer_phone: orderData.customer_phone,
       customerName: orderData.customer_name,
-      customer_name: orderData.customer_name,    // Ensure both fields
+      customer_name: orderData.customer_name,
       recipientName: orderData.recipient_name,
       recipientPhone: orderData.recipient_phone,
-      deliveryAddress: fullAddress,  // 상세주소 포함된 주소
+      deliveryAddress: fullAddress,
       deliveryDate: orderData.delivery_date,
       deliveryTime: orderData.delivery_time,
       message: orderData.special_instructions,
@@ -494,7 +436,8 @@ console.log('[DEBUG pendingOrder]', {
       totalAmount: product.price * quantity - discountAmount,
       total_amount: product.price * quantity - discountAmount,
       discountAmount: discountAmount,
-      discount_amount: discountAmount,  // API expects this field
+      discount_amount: discountAmount,
+      funeral_id: funeralId || null,
       items: [{
         productId: product.id,
         productName: product.name,
@@ -527,7 +470,6 @@ console.log('[DEBUG pendingOrder]', {
         alert(`주문 완료! 주문번호: ${result.orderNumber || 'FLW-' + Date.now().toString().slice(-6)}`)
         setShowPayment(false)
         setShowPaymentModal(false)
-        // 주문 완료 후 홈으로 이동
         window.location.href = '/'
       } else {
         alert(result.message || '주문 처리 중 오류가 발생했습니다.')
@@ -539,7 +481,6 @@ console.log('[DEBUG pendingOrder]', {
   }
   
   if (isLoading) {
-    // funeral autoOrder일 때는 로딩화면도 숨김
     if (autoOrder) {
       return (
         <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
@@ -564,26 +505,26 @@ console.log('[DEBUG pendingOrder]', {
     )
   }
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <EmotionalNavbar showCategories={true} fixed={true} />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">상품을 찾을 수 없습니다</h2>
-            <p className="text-gray-600 mb-4">올바른 상품 링크를 확인해주세요.</p>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => window.location.href = '/'}
-            >
-              홈으로 돌아가기
-            </Button>
-          </div>
+if (!product) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <EmotionalNavbar showCategories={true} fixed={true} />
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">상품을 찾을 수 없습니다</h2>
+          <p className="text-gray-600 mb-4">올바른 상품 링크를 확인해주세요.</p>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => window.location.href = '/'}
+          >
+            홈으로 돌아가기
+          </Button>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
+}
 
   const toggleWishlist = () => {
     setIsWishlisted(!isWishlisted)
@@ -591,36 +532,29 @@ console.log('[DEBUG pendingOrder]', {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {!autoOrder && <EmotionalNavbar showCategories={true} fixed={true} />}
-      
-      {!autoOrder && <div className="pt-20 border-b-2 border-green-600"></div>}
+    {!autoOrder && <EmotionalNavbar showCategories={true} fixed={true} />}
+    {!autoOrder && <div className="pt-20 border-b-2 border-green-600"></div>}
 
-      {/* autoOrder일 때는 본문 숨김 */}
-      {!autoOrder && (
-        <>
-      {/* PC 레이아웃 */}
-      <div className="hidden lg:block">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="grid grid-cols-2">
-              {/* 왼쪽: 이미지 섹션 */}
-              <div className="p-8">
-                <ProductImageGallery 
-                  images={{
-                    main: product.image_url || product.image || '/placeholder.jpg',
-                    left45: product.image_left45,
-                    right45: product.image_right45
-                  }}
-                  productName={product.name}
-                />
-              </div>
-
-              {/* 오른쪽: 상품 정보 */}
-              <div className="p-8 border-l">
+    {!autoOrder && (
+      <>
+        <div className="hidden lg:block">
+          <div className="max-w-6xl mx-auto px-4 py-8">
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="grid grid-cols-2">
+                <div className="p-8">
+                  <ProductImageGallery 
+                    images={{
+                      main: product.image_url || product.image || '/placeholder.jpg',
+                      left45: product.image_left45,
+                      right45: product.image_right45
+                    }}
+                    productName={product.name}
+                  />
+                </div>
+                <div className="p-8 border-l">
                 <h1 className="text-3xl font-bold text-gray-900 mb-3">{product.name}</h1>
                 <p className="text-gray-600 mb-6 text-lg">{product.description}</p>
 
-                {/* 가격 */}
                 <div className="py-4 border-t border-b mb-6">
                   {product.originalPrice && (
                     <p className="text-gray-400 line-through text-lg">
@@ -632,7 +566,6 @@ console.log('[DEBUG pendingOrder]', {
                   </p>
                 </div>
 
-                {/* 상품 설명 */}
                 {product.description && (
                   <div className="bg-amber-50 p-4 rounded-lg mb-6">
                     <div className="text-amber-700 font-medium mb-2">
@@ -644,8 +577,6 @@ console.log('[DEBUG pendingOrder]', {
                   </div>
                 )}
                 
-
-                {/* 배송 안내 */}
                 <div className="bg-blue-50 p-4 rounded-lg mb-6">
                   <div className="text-blue-700 font-semibold mb-3">
                     📦 배송 안내
@@ -680,10 +611,6 @@ console.log('[DEBUG pendingOrder]', {
                   </div>
                 </div>
 
-{/* 수량 선택 */}
-                
-
-{/* 수량 선택 */}
                 <div className="flex items-center justify-between py-4 mb-4">
                   <span className="text-gray-700 font-medium">수량</span>
                   <div className="flex items-center space-x-3">
@@ -703,9 +630,6 @@ console.log('[DEBUG pendingOrder]', {
                   </div>
                 </div>
 
-                {/* 포인트 사용 - 제거 */}
-
-                {/* 총 상품금액 */}
                 <div className="p-4 bg-gray-50 rounded-lg mb-6">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-600">상품금액</span>
@@ -727,7 +651,6 @@ console.log('[DEBUG pendingOrder]', {
                   </div>
                 </div>
 
-                {/* 구매 버튼 */}
                 <div className="grid grid-cols-2 gap-3">
                   <Button variant="ghost" size="md" onClick={toggleWishlist}>
                     <Heart className={`w-5 h-5 mr-2 ${isWishlisted ? 'fill-red-600' : ''}`} />
@@ -741,7 +664,6 @@ console.log('[DEBUG pendingOrder]', {
             </div>
           </div>
 
-          {/* 리뷰 섹션 */}
           {productReviews.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm mt-6">
               <div className="p-6">
@@ -772,18 +694,13 @@ console.log('[DEBUG pendingOrder]', {
           )}
         </div>
         
-{/* 배송완료 상품 갤러리 - PC */}
-<div className="max-w-6xl mx-auto px-4 py-8">
-  <DeliveryExamples category={product?.category} />
-</div>
-      </div>  {/* PC 레이아웃 닫기 */}
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <DeliveryExamples category={product?.category} />
+        </div>
+      </div>
 
-      {/* 모바일 레이아웃 - 기존 유지 */}
       <div className="lg:hidden max-w-4xl mx-auto px-4 py-6 space-y-6 mt-4">
-        
-        {/* Product Card */}
         <div className="bg-white shadow-lg overflow-hidden">
-          {/* Product Image Gallery */}
           <div className="p-4">
             <ProductImageGallery 
               images={{
@@ -795,14 +712,12 @@ console.log('[DEBUG pendingOrder]', {
             />
           </div>
           
-          {/* Product Info */}
           <div className="p-4">
             <h1 className="text-xl font-bold text-gray-900 mb-2">{product.name}</h1>
             <div className="text-2xl font-bold text-green-600 mb-3">
               {product.price.toLocaleString()}원
             </div>
             
-            {/* 상품 설명 */}
             {product.description && (
               <div className="bg-amber-50 rounded-lg p-2 mb-2">
                 <div className="text-amber-700 text-xs font-medium mb-1">
@@ -813,7 +728,7 @@ console.log('[DEBUG pendingOrder]', {
                 </div>
               </div>
             )}
-            {/* 배송 안내 */}
+            
             <div className="bg-blue-50 rounded-lg p-3 mb-3">
               <div className="text-blue-700 text-xs font-semibold mb-2">
                 📦 배송 안내
@@ -850,7 +765,6 @@ console.log('[DEBUG pendingOrder]', {
           </div>
         </div>
 
-        {/* Membership Benefits */}
         <div className="bg-white shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-green-50">
             <h3 className="text-lg font-semibold text-gray-900">💎 회원 혜택</h3>
@@ -870,7 +784,7 @@ console.log('[DEBUG pendingOrder]', {
                 </tr>
                 <tr>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">회원</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">5% 적립</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">5% 적립 + 포인트 사용</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">추천인</td>
@@ -881,12 +795,10 @@ console.log('[DEBUG pendingOrder]', {
           </div>
         </div>
 
- {/* 배송완료 상품 갤러리 - 모바일 */}
-<div className="bg-white shadow-sm p-6">
-  <DeliveryExamples category={product?.category} />
-</div>
+        <div className="bg-white shadow-sm p-6">
+          <DeliveryExamples category={product?.category} />
+        </div>
         
-        {/* 리뷰 섹션 - 모바일 */}
         {productReviews.length > 0 && (
           <div className="bg-white shadow-sm p-6">
             <h3 className="text-lg font-semibold mb-4">구매 리뷰 ({productReviews.length})</h3>
@@ -915,7 +827,6 @@ console.log('[DEBUG pendingOrder]', {
         )}
       </div>
 
-      {/* Fixed Bottom Order Bar - 모바일에만 표시 */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
@@ -952,12 +863,12 @@ console.log('[DEBUG pendingOrder]', {
         </div>
       </div>
 
-      {/* Payment Modal with Address - 기존 코드 유지 */}
-      {showPayment && (
+      {/* 기존 showPayment 모달 제거 - SecureOrderModal로 대체 */}
+      {false && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">주문 정보 입력</h3>
             
-            {/* 주문자 정보 */}
             <div className="mb-4">
               <h4 className="text-base md:text-lg font-semibold mb-2">주문자 정보</h4>
               <div className="grid grid-cols-2 gap-2">
@@ -979,9 +890,9 @@ console.log('[DEBUG pendingOrder]', {
               </div>
             </div>
             
-            {/* 포인트 정보 - 간소화 */}
-            {totalPoints > 0 && (
-              <label className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200 cursor-pointer">
+            {/* 포인트 사용 */}
+            {isLoggedIn && totalPoints > 0 && (
+              <label className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200 cursor-pointer mb-4">
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -998,7 +909,7 @@ console.log('[DEBUG pendingOrder]', {
               </label>
             )}
             
-            {/* 추천인 입력 - 간소화 */}
+            {/* 추천인 */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 추천인 전화번호 (선택)
@@ -1007,21 +918,12 @@ console.log('[DEBUG pendingOrder]', {
                 type="tel"
                 placeholder="010-0000-0000"
                 value={referrerPhone}
-                onChange={(e) => {
-                  const formatted = formatPhoneNumber(e.target.value)
-                  setReferrerPhone(formatted)
-                }}
+                onChange={(e) => setReferrerPhone(formatPhoneNumber(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 maxLength={13}
               />
-              {referrerPhone && (
-                <p className="mt-1 text-xs text-gray-500">
-                  구매자 {Math.floor(product.price * quantity * 0.05).toLocaleString()}원, 추천인 {Math.floor(product.price * quantity * 0.03).toLocaleString()}원 적립
-                </p>
-              )}
             </div>
             
-            {/* 수령인 정보 */}
             <div className="mb-4">
               <h4 className="text-base md:text-lg font-semibold mb-2">수령인 정보</h4>
               <div className="grid grid-cols-2 gap-2">
@@ -1043,7 +945,7 @@ console.log('[DEBUG pendingOrder]', {
               </div>
             </div>
             
-            {/* 리본 문구 선택 */}
+            {/* 리본 문구 */}
             <div className="mb-4">
               <h4 className="text-base md:text-lg font-semibold mb-2">리본 문구</h4>
               <div className="space-y-2">
@@ -1069,54 +971,31 @@ console.log('[DEBUG pendingOrder]', {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="직접 입력"
                 />
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="text-xs text-gray-500">주문자</p>
-                    <p className="text-sm font-medium">{orderData.customer_name || '미입력'} {orderData.customer_phone && `(${orderData.customer_phone})`}</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="text-xs text-gray-500">리본문구</p>
-                    <p className="text-sm font-medium truncate">{orderData.ribbon_text || '선택 안함'}</p>
-                  </div>
-                </div>
               </div>
             </div>
             
-            {/* 배송 정보 */}
             <div className="mb-4">
               <h4 className="text-base md:text-lg font-semibold mb-2">배송 정보</h4>
-              
               <div className="grid grid-cols-2 gap-2 mb-2">
-                <div>
-                  <input
-                    type="date"
-                    value={orderData.delivery_date}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setOrderData({...orderData, delivery_date: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
-                <div>
-                  <select
-                    value={orderData.delivery_time}
-                    onChange={(e) => setOrderData({...orderData, delivery_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="즉시배송">즉시배송 (3시간 내)</option>
-                    <option value="09:00">오전 9시</option>
-                    <option value="10:00">오전 10시</option>
-                    <option value="11:00">오전 11시</option>
-                    <option value="12:00">오후 12시</option>
-                    <option value="13:00">오후 1시</option>
-                    <option value="14:00">오후 2시</option>
-                    <option value="15:00">오후 3시</option>
-                    <option value="16:00">오후 4시</option>
-                    <option value="17:00">오후 5시</option>
-                    <option value="18:00">오후 6시</option>
-                  </select>
-                </div>
+                <input
+                  type="date"
+                  value={orderData.delivery_date}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setOrderData({...orderData, delivery_date: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+                <select
+                  value={orderData.delivery_time}
+                  onChange={(e) => setOrderData({...orderData, delivery_time: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="즉시배송">즉시배송 (3시간 내)</option>
+                  <option value="09:00">오전 9시</option>
+                  <option value="12:00">오후 12시</option>
+                  <option value="15:00">오후 3시</option>
+                  <option value="18:00">오후 6시</option>
+                </select>
               </div>
-              
               <button
                 onClick={openAddressSearch}
                 disabled={!scriptLoaded}
@@ -1142,7 +1021,29 @@ console.log('[DEBUG pendingOrder]', {
                 </div>
               )}
             </div>
-
+            
+            {/* 금액 정보 */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-600">상품금액</span>
+                <span className="text-gray-800">
+                  {(product.price * quantity).toLocaleString()}원
+                </span>
+              </div>
+              {usePoints && discountAmount > 0 && (
+                <div className="flex justify-between items-center mb-2 text-red-600">
+                  <span>포인트 할인</span>
+                  <span>-{discountAmount.toLocaleString()}원</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-lg font-medium">총 결제금액</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {(product.price * quantity - discountAmount).toLocaleString()}원
+                </span>
+              </div>
+            </div>
+            
             <div className="flex space-x-2">
               <Button
                 variant="secondary"
@@ -1165,19 +1066,27 @@ console.log('[DEBUG pendingOrder]', {
         </div>
       )}
       
-      {/* autoOrder 조건부 렌더링 닫기 */}
       </>
-      )}
+    )}
       
-      {/* Payment Modal */}
       {product && (
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          orderData={orderData}
-          totalAmount={product.price * quantity - discountAmount}
-          discountAmount={discountAmount}
+        <SecureOrderModal
+          isOpen={showPayment}
+          onClose={() => {
+            console.log('Modal closing with product:', product)
+            setShowPayment(false)
+          }}
+          product={{
+            id: product.id || product.product_id || '',
+            name: product.name || product.display_name || '',
+            price: product.price || product.customer_price || 0,
+            image: product.image || product.image_url || '/placeholder.jpg'
+          }}
+          quantity={quantity}
           onSuccess={handlePaymentSuccess}
+          funeralId={funeralId}
+          funeralAddress={funeralAddress || undefined}
+          funeralPostal={funeralPostal || undefined}
         />
       )}
     </div>

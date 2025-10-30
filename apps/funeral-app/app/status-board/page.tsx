@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import StatusBoard from '../components/StatusBoard';
 
-export default function StatusBoardPage() {
+function StatusBoardContent() {
+  const searchParams = useSearchParams();
+  const roomParam = searchParams.get('room');
+  
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
   const [roomData, setRoomData] = useState<any[]>([]);
-  const [autoRotate, setAutoRotate] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(!roomParam);
 
   const rooms = [
     { id: 1, name: '특실 5빈소', floor: '5층' },
@@ -17,13 +21,17 @@ export default function StatusBoardPage() {
   ];
 
   useEffect(() => {
-    // Load funeral data from localStorage
     const loadData = () => {
       try {
         const savedFunerals = localStorage.getItem('funerals');
         if (savedFunerals) {
           const funerals = JSON.parse(savedFunerals);
-          const activeRooms = funerals.filter((f: any) => f.room_id && f.deceased_name);
+          let activeRooms = funerals.filter((f: any) => f.room_id && f.deceased_name);
+          
+          if (roomParam) {
+            activeRooms = activeRooms.filter((f: any) => f.room_id === roomParam);
+          }
+          
           setRoomData(activeRooms);
         }
       } catch (error) {
@@ -32,16 +40,16 @@ export default function StatusBoardPage() {
     };
 
     loadData();
-    const interval = setInterval(loadData, 10000); // Refresh every 10 seconds
+    const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [roomParam]);
 
   useEffect(() => {
     if (!autoRotate || roomData.length === 0) return;
     
     const rotateInterval = setInterval(() => {
       setCurrentRoomIndex(prev => (prev + 1) % roomData.length);
-    }, 15000); // Rotate every 15 seconds
+    }, 15000);
 
     return () => clearInterval(rotateInterval);
   }, [autoRotate, roomData.length]);
@@ -78,8 +86,7 @@ export default function StatusBoardPage() {
         burialLocation={currentFuneral?.burial_location}
       />
       
-      {/* Room indicators */}
-      {roomData.length > 1 && (
+      {!roomParam && roomData.length > 1 && (
         <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-2">
           {roomData.map((_, idx) => (
             <button
@@ -94,13 +101,22 @@ export default function StatusBoardPage() {
         </div>
       )}
 
-      {/* Auto-rotate toggle */}
-      <button
-        onClick={() => setAutoRotate(!autoRotate)}
-        className={`absolute top-4 right-4 px-4 py-2 rounded ${autoRotate ? 'bg-green-600' : 'bg-gray-600'} text-white text-sm`}
-      >
-        {autoRotate ? '자동 전환 켜짐' : '자동 전환 꺼짐'}
-      </button>
+      {!roomParam && (
+        <button
+          onClick={() => setAutoRotate(!autoRotate)}
+          className={`absolute top-4 right-4 px-4 py-2 rounded ${autoRotate ? 'bg-green-600' : 'bg-gray-600'} text-white text-sm`}
+        >
+          {autoRotate ? '자동 전환 켜짐' : '자동 전환 꺼짐'}
+        </button>
+      )}
     </div>
+  );
+}
+
+export default function StatusBoardPage() {
+  return (
+    <Suspense fallback={<div className="w-full h-screen bg-gray-100" />}>
+      <StatusBoardContent />
+    </Suspense>
   );
 }

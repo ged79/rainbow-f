@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, Share2, Heart, Flower } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getCondolenceMessages, addCondolenceMessage } from '../../lib/condolenceApi';
+import { createBrowserClient } from '@supabase/ssr';
 
 // Kakao Maps TypeScript declaration
 declare global {
@@ -14,19 +15,121 @@ declare global {
 
 export default function MinimalObituary() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showCondolence, setShowCondolence] = useState(false);
   const [showFlower, setShowFlower] = useState(false);
   const [showDonation, setShowDonation] = useState(false);
   const [obituaryData, setObituaryData] = useState<any>(null);
   const [condolenceMessages, setCondolenceMessages] = useState<any[]>([]);
+  const [flowerSenders, setFlowerSenders] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState({ name: '', relation: '', message: '' });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedData = sessionStorage.getItem('obituaryPreview');
-    if (savedData) {
-      setObituaryData(JSON.parse(savedData));
-    }
-    loadCondolenceMessages();
+    const loadFuneralData = async () => {
+      // Get funeral_id from URL parameter
+      const funeralId = searchParams.get('id');
+
+      
+      if (funeralId) {
+        // Fetch from database
+        try {
+          const supabase = createBrowserClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          );
+          
+          const { data, error } = await supabase
+            .from('funerals')
+            .select('*')
+            .eq('id', funeralId)
+            .single();
+
+
+if (error) throw error;
+          
+          if (error) throw error;
+          
+          if (data) {
+            // Transform database format to obituary format
+            const transformed = {
+              deceasedName: data.deceased_name,
+              deceasedNameHanja: data.deceased_hanja,
+              deceasedAge: data.age,
+              gender: data.gender,
+              religion: data.religion,
+              religionTitle: data.religion_title,
+              placementTime: data.placement_time,
+              casketTime: data.casket_time,
+              shroudTime: data.shroud_time,
+              funeralTime: data.funeral_time,
+              deathTime: data.death_time,
+              room: `${data.room_number}빈소`,
+              floor: data.floor || '',
+              familyMembers: data.family_members || [],
+              chiefMessage: data.chief_message,
+              burialType: data.burial_type,
+              burialLocation: data.burial_location,
+              photo: data.use_photo_in_obituary ? data.photo_url : null,
+              bankAccounts: data.bank_accounts || [],
+              funeralHomeId: data.funeral_home_id,
+              roomNumber: data.room_number
+            };
+            
+            setObituaryData(transformed);
+            
+            // Load condolence messages using fetched data
+            if (data.funeral_home_id && data.room_number) {
+              try {
+                const messages = await getCondolenceMessages(data.funeral_home_id, data.room_number);
+                setCondolenceMessages(messages);
+              } catch (err) {
+                console.error('Failed to load condolence messages:', err);
+              }
+            }
+            
+            // Load flower senders using funeral_id
+            try {
+              console.log('[DEBUG] Fetching flower senders for:', funeralId);
+              const { data: orders, error: ordersError } = await supabase
+                .from('customer_orders')
+                .select('customer_name, status')
+                .eq('funeral_id', funeralId)
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false });
+              
+              console.log('[DEBUG] Flower orders:', orders, 'Error:', ordersError);
+              
+              if (!ordersError && orders) {
+                // 중복 제거
+                const uniqueSenders = orders.reduce((acc: any[], order: any) => {
+                  if (!acc.find(s => s.customer_name === order.customer_name)) {
+                    acc.push(order);
+                  }
+                  return acc;
+                }, []);
+                setFlowerSenders(uniqueSenders);
+              }
+            } catch (err) {
+              console.error('Failed to load flower senders:', err);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load funeral data:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Fallback to SessionStorage (for admin preview only)
+        const savedData = sessionStorage.getItem('obituaryPreview');
+        if (savedData) {
+          setObituaryData(JSON.parse(savedData));
+        }
+        setLoading(false);
+      }
+    };
+    
+    loadFuneralData();
 
     // Load Kakao Map Script
     const script = document.createElement('script');
@@ -44,33 +147,13 @@ export default function MinimalObituary() {
           };
           const map = new window.kakao.maps.Map(container, options);
           
-          // 마커 추가
           const markerPosition = new window.kakao.maps.LatLng(36.1853424, 127.7809592);
           const marker = new window.kakao.maps.Marker({ position: markerPosition });
           marker.setMap(map);
         }
       });
     };
-  }, []);
-
-  const loadCondolenceMessages = async () => {
-    try {
-      const funeralHomeId = sessionStorage.getItem('funeral_home_id');
-      const savedData = sessionStorage.getItem('obituaryPreview');
-      if (!funeralHomeId || !savedData) return;
-      
-      const parsed = JSON.parse(savedData);
-      const roomMatch = parsed?.room?.match(/(\d+)/);
-      const roomNumber = roomMatch ? parseInt(roomMatch[1]) : null;
-      
-      if (roomNumber) {
-        const messages = await getCondolenceMessages(funeralHomeId, roomNumber);
-        setCondolenceMessages(messages);
-      }
-    } catch (error) {
-      console.error('조문 메시지 로드 실패:', error);
-    }
-  };
+  }, [searchParams]);
 
   const handleSubmitMessage = async () => {
     if (!newMessage.name || !newMessage.message) {
@@ -78,34 +161,53 @@ export default function MinimalObituary() {
       return;
     }
 
+    if (!obituaryData?.funeralHomeId || !obituaryData?.roomNumber) {
+      alert('조문 메시지를 등록할 수 없습니다.');
+      return;
+    }
+
     try {
-      const funeralHomeId = sessionStorage.getItem('funeral_home_id');
-      const savedData = sessionStorage.getItem('obituaryPreview');
-      if (!funeralHomeId || !savedData) return;
+      await addCondolenceMessage({
+        funeral_home_id: obituaryData.funeralHomeId,
+        room_number: obituaryData.roomNumber,
+        sender_name: newMessage.name,
+        sender_relation: newMessage.relation,
+        message: newMessage.message
+      });
       
-      const parsed = JSON.parse(savedData);
-      const roomMatch = parsed?.room?.match(/(\d+)/);
-      const roomNumber = roomMatch ? parseInt(roomMatch[1]) : null;
+      setNewMessage({ name: '', relation: '', message: '' });
+      setShowCondolence(false);
       
-      if (roomNumber) {
-        await addCondolenceMessage({
-          funeral_home_id: funeralHomeId,
-          room_number: roomNumber,
-          sender_name: newMessage.name,
-          sender_relation: newMessage.relation,
-          message: newMessage.message
-        });
-        
-        setNewMessage({ name: '', relation: '', message: '' });
-        setShowCondolence(false);
-        await loadCondolenceMessages();
-        alert('조문 메시지가 등록되었습니다.');
-      }
+      // Reload messages
+      const messages = await getCondolenceMessages(obituaryData.funeralHomeId, obituaryData.roomNumber);
+      setCondolenceMessages(messages);
+      alert('조문 메시지가 등록되었습니다.');
     } catch (error) {
       console.error('메시지 등록 실패:', error);
       alert('메시지 등록에 실패했습니다.');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-400 text-xl">부고장을 불러오는 중...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!obituaryData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-400 text-xl mb-4">부고 정보를 찾을 수 없습니다</div>
+          <p className="text-gray-500 text-sm">링크가 올바른지 확인해주세요</p>
+        </div>
+      </div>
+    );
+  }
 
   const deceasedName = obituaryData?.deceasedName || '고인';
   const deceasedNameHanja = obituaryData?.deceasedNameHanja || '';
@@ -122,7 +224,7 @@ export default function MinimalObituary() {
   const chiefMessage = obituaryData?.chiefMessage || '';
   const burialType = obituaryData?.burialType || '';
   const burialLocation = obituaryData?.burialLocation || '';
-  const photo = obituaryData?.photo || '';
+  const photo = obituaryData?.photo || null;
   const bankAccounts = obituaryData?.bankAccounts || [];
   
   let familyMembers = obituaryData?.familyMembers || [];
@@ -155,7 +257,13 @@ export default function MinimalObituary() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <>
+      <style jsx global>{`
+        * {
+          font-family: "Noto Serif KR", "Nanum Myeongjo", serif !important;
+        }
+      `}</style>
+      <div className="min-h-screen bg-gray-50 relative">
       {/* 헤더 */}
       <div className="bg-[#2c3e50] border-b-2 border-slate-700 relative z-50 sticky top-0 shadow-sm overflow-hidden py-2">
         <div className="max-w-xl mx-auto">
@@ -169,26 +277,45 @@ export default function MinimalObituary() {
       </div>
 
       <div className="max-w-xl mx-auto pb-24 px-6 relative z-10">
-        {/* 영정 및 고인정보 */}
-        <div className="py-6 border-b border-slate-200">
-          <div className="flex justify-center mb-6">
-            <div className="w-48 h-56 bg-white border border-slate-200 overflow-hidden flex items-center justify-center relative">
-              {photo ? (
-                <img src={photo} alt="영정사진" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-center px-4">
-                  <div className="text-6xl mb-3">🌼</div>
-                  <p className="text-xs text-slate-600 leading-relaxed">삼가 고인의<br />명복을 빕니다</p>
-                </div>
+        {/* 영정 및 고인정보 - 히어로 섹션 */}
+        <div className="relative py-8 -mx-6">
+          {/* 배경 이미지 - 흑백 */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(/장례식.jpg)`,
+              filter: 'grayscale(100%)',
+              opacity: 0.3
+            }}
+          />
+          
+          {/* 흰색 배경 */}
+          <div className="absolute inset-0 bg-white" style={{ zIndex: -1 }} />
+          
+          {/* 컨텐츠 */}
+          <div className="relative z-10 px-6">
+            <div className="flex justify-center mb-6">
+              <div className="w-48 h-56 bg-slate-700 border-4 border-slate-700 overflow-hidden flex items-center justify-center relative shadow-2xl">
+                {photo ? (
+                  <img src={photo} alt="영정사진" className="w-full h-full object-cover" />
+                ) : (
+                  <div 
+                    className="w-full h-full bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url(/코스모스.jpg)`,
+                      filter: 'grayscale(100%) brightness(1.2)'
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="text-center space-y-2">
+              <h2 className="text-4xl font-bold text-slate-700" style={{ fontFamily: '"Noto Serif KR", "Nanum Myeongjo", serif' }}>故 {deceasedName}</h2>
+              {(deceasedAge || gender) && (
+                <p className="text-slate-500 text-lg" style={{ fontFamily: '"Noto Serif KR", "Nanum Myeongjo", serif' }}>({gender}{deceasedAge && `/${deceasedAge}세`})</p>
               )}
             </div>
-          </div>
-
-          <div className="text-center space-y-1">
-            <h2 className="text-4xl font-bold text-slate-900">故 {deceasedName}</h2>
-            {(deceasedAge || gender) && (
-              <p className="text-slate-600 text-lg">({gender}{deceasedAge && `/${deceasedAge}세`})</p>
-            )}
           </div>
         </div>
 
@@ -198,68 +325,53 @@ export default function MinimalObituary() {
             <h3 className="text-sm text-amber-600 mb-3 font-bold flex items-center gap-2">
               <span>⚪</span> 유가족
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {familyMembers.map((member: any, idx: number) => (
-                <div key={idx} className="grid grid-cols-[80px_1fr] gap-4 text-sm py-2">
+                <div key={idx} className="grid grid-cols-[80px_1fr] gap-4 text-sm py-1">
                   <span className="text-slate-600">{member.relation}</span>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-900">{member.name}</span>
-                    {member.phone && (
-                      <a href={`tel:${member.phone}`} className="text-slate-600 text-xs">{member.phone}</a>
-                    )}
-                  </div>
+                  <span className="text-slate-900">{member.name}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* 일정 정보 */}
+{/* 일정 정보 */}
         <div className="py-4 border-b border-slate-200">
           <h3 className="text-sm text-amber-600 mb-3 font-bold flex items-center gap-2">
             <span>⚪</span> 장례일정
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {deathTime && (
-              <div className="flex justify-between text-sm py-2">
+              <div className="flex justify-between text-sm py-1">
                 <span className="text-slate-600">별세</span>
                 <span className="text-slate-900">{formatDateTime(deathTime)}</span>
               </div>
             )}
-            {placementTime && (
-              <div className="flex justify-between text-sm py-2">
-                <span className="text-slate-600">입실</span>
-                <span className="text-slate-900">{formatDateTime(placementTime)}</span>
-              </div>
-            )}
-            {shroudTime && (
-              <div className="flex justify-between text-sm py-2">
-                <span className="text-slate-600">염습</span>
-                <span className="text-slate-900">{formatDateTime(shroudTime)}</span>
-              </div>
-            )}
             {casketTime && (
-              <div className="flex justify-between text-sm py-2">
+              <div className="flex justify-between text-sm py-1">
                 <span className="text-slate-600">입관</span>
                 <span className="text-slate-900">{formatDateTime(casketTime)}</span>
               </div>
             )}
             {funeralTime && (
-              <div className="flex justify-between text-sm pt-3 border-t-2 border-slate-300 py-3 bg-slate-50 px-4 rounded">
-                <span className="text-slate-900 font-bold">발인</span>
-                <div className="text-right">
-                  <div className="text-slate-900 font-bold">{formatDateTime(funeralTime)}</div>
-                </div>
+              <div className="flex justify-between text-sm py-1">
+                <span className="text-slate-600">발인</span>
+                <span className="text-slate-900">{formatDateTime(funeralTime)}</span>
               </div>
             )}
             {burialLocation && (
-              <div className="flex justify-between text-sm py-2">
-                <span className="text-slate-600">장지</span>
-                <div className="text-right">
-                  <div className="text-slate-900">{burialLocation}</div>
-                </div>
-              </div>
-            )}
+  <div className="flex justify-between text-sm py-1">
+    <span className="text-slate-600">장지</span>
+    <span className="text-slate-900">{burialLocation}</span>
+  </div>
+)}
+{burialType === 'cremation' && !burialLocation && (
+  <div className="flex justify-between text-sm py-1">
+    <span className="text-slate-600">장지</span>
+    <span className="text-slate-900">화장</span>
+  </div>
+)}
           </div>
         </div>
 
@@ -270,9 +382,14 @@ export default function MinimalObituary() {
         </h3>
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <p className="text-slate-900 text-lg font-bold">영동병원 장례식장</p>
-              {room && <p className="text-slate-700 text-sm font-medium">{room}</p>}
-            </div>
+  <p className="text-slate-900 text-lg font-bold">영동병원 장례식장</p>
+  {room && obituaryData.floor && (
+    <p className="text-slate-900 text-lg font-bold">{room} ({obituaryData.floor})</p>
+  )}
+  {room && !obituaryData.floor && (
+    <p className="text-slate-900 text-lg font-bold">{room}</p>
+  )}
+</div>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-3">
                 <MapPin size={16} className="text-slate-500 mt-0.5 shrink-0" />
@@ -322,13 +439,13 @@ export default function MinimalObituary() {
           </div>
         </div>
 
-        {/* 부의금 계좌 */}
+{/* 부의금 계좌 */}
         {bankAccounts.length > 0 && bankAccounts[0].bankName && (
           <div className="py-4 border-b border-slate-200">
             <h3 className="text-sm text-amber-600 mb-3 font-bold flex items-center gap-2">
               <span>⚪</span> 마음 전하실 곳
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-2">
               {bankAccounts.map((account: any, idx: number) => (
                 account.bankName && (
                   <div key={idx} className="text-sm space-y-2 py-4 bg-slate-50 px-4 rounded">
@@ -336,9 +453,20 @@ export default function MinimalObituary() {
                       <span className="text-slate-600">은행</span>
                       <span className="text-slate-900 font-bold">{account.bankName}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span className="text-slate-600">계좌번호</span>
-                      <span className="text-slate-900 font-mono font-medium">{account.accountNumber}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-900 font-mono font-medium">{account.accountNumber}</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(account.accountNumber);
+                            alert('계좌번호가 복사되었습니다.');
+                          }}
+                          className="px-2 py-1 text-xs bg-slate-600 text-white hover:bg-slate-700 transition-colors rounded"
+                        >
+                          복사
+                        </button>
+                      </div>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-600">예금주</span>
@@ -366,11 +494,21 @@ export default function MinimalObituary() {
         {/* 근조화환 보내신 분들 */}
         <div className="py-4 border-b border-slate-200">
           <h3 className="text-sm text-amber-600 mb-3 font-bold flex items-center gap-2">
-            <span>⚪</span> 근조화환 보내신 분들
+            <span>⚪</span> 근조화환 보내신 분들 ({flowerSenders.length})
           </h3>
-          <div className="text-sm text-slate-600 text-center py-8">
-            아직 화환이 접수되지 않았습니다
-          </div>
+          {flowerSenders.length === 0 ? (
+            <div className="text-sm text-slate-600 text-center py-8">
+              아직 화환이 접수되지 않았습니다
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {flowerSenders.map((sender, idx) => (
+                <div key={idx} className="bg-slate-50 p-3 rounded border border-slate-200 text-center">
+                  <span className="text-slate-900 font-medium">{sender.customer_name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 조문 메시지 */}
@@ -402,7 +540,7 @@ export default function MinimalObituary() {
           )}
           <button
             onClick={() => setShowCondolence(true)}
-            className="w-full mt-4 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded font-medium transition-colors"
+            className="w-full mt-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded font-medium transition-colors"
           >
             조문 메시지 남기기
           </button>
@@ -419,7 +557,14 @@ export default function MinimalObituary() {
             <span className="text-xl font-bold">조의금</span>
           </button>
           <button 
-            onClick={() => router.push('/obituary/flower')}
+            onClick={() => {
+              const funeralId = searchParams.get('id')
+              if (funeralId) {
+                router.push(`/obituary/flower?id=${funeralId}`)
+              } else {
+                router.push('/obituary/flower')
+              }
+            }}
             className="flex flex-col items-center gap-1 py-2 hover:bg-slate-700 transition-colors text-white"
           >
             <span className="text-xl font-bold">근조화환</span>
@@ -440,7 +585,7 @@ export default function MinimalObituary() {
         </div>
       </div>
 
-      {/* 부의금 모달 */}
+{/* 부의금 모달 */}
       {showDonation && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-[70]">
           <div className="bg-white max-w-md w-full p-8 shadow-2xl rounded">
@@ -455,9 +600,20 @@ export default function MinimalObituary() {
                           <span className="text-slate-600">은행</span>
                           <span className="text-slate-900 font-bold">{account.bankName}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <span className="text-slate-600">계좌번호</span>
-                          <span className="text-slate-900 font-mono font-medium">{account.accountNumber}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-900 font-mono font-medium">{account.accountNumber}</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(account.accountNumber);
+                                alert('계좌번호가 복사되었습니다.');
+                              }}
+                              className="px-2 py-1 text-xs bg-slate-600 text-white hover:bg-slate-700 transition-colors rounded"
+                            >
+                              복사
+                            </button>
+                          </div>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600">예금주</span>
@@ -569,5 +725,6 @@ export default function MinimalObituary() {
         </div>
       )}
     </div>
+    </>
   );
 }

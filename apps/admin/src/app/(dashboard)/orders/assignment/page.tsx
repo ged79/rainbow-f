@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { 
   formatCurrency, 
@@ -29,6 +30,7 @@ import AdminDeliveryCompleteModal from '@/components/AdminDeliveryCompleteModal'
 import FuneralDeliveryCompleteModal from '@/components/FuneralDeliveryCompleteModal'
 
 export default function OrderAssignmentPage() {
+  const router = useRouter()
   const [unassignedOrders, setUnassignedOrders] = useState<UnifiedOrder[]>([])
   const [funeralOrders, setFuneralOrders] = useState<any[]>([])
   const [stores, setStores] = useState<Store[]>([])
@@ -416,6 +418,7 @@ export default function OrderAssignmentPage() {
                         : 'border-gray-200 hover:border-blue-300'
                     }`}
                   >
+                    {/* 헤더 */}
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <span className="text-sm font-medium text-gray-600">
@@ -427,57 +430,67 @@ export default function OrderAssignmentPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-sm text-gray-500">
-                        {formatDate(order.created_at)}
+                      <span className="text-xs text-gray-500">
+                        {formatDate(order.created_at).split(' ')[1]}
                       </span>
                     </div>
                     
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2 text-blue-700">
-                        <User className="h-4 w-4" />
-                        <span className="font-medium">주문: {order.customer.name} ({formatPhone(order.customer.phone)})</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-400" />
-                        <span>받는분: {order.recipient.name} ({formatPhone(order.recipient.phone)})</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                        <span className="flex-1">
-                          {order.recipient.address.sido} {order.recipient.address.sigungu} 
-                          {order.recipient.address.dong} {order.recipient.address.detail}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-gray-400" />
-                        <span className="font-medium">
-                          {order.product?.name || '상품정보 없음'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span>
-                          {order.delivery?.date || formatDate(order.created_at)} 
-                          {order.delivery?.time || '시간미정'}
-                        </span>
-                      </div>
+                    {/* 상품명 */}
+                    <div className="font-bold text-lg mb-2">
+                      {order.product?.name || '상품정보 없음'}
                     </div>
                     
+                    {/* 주문자 */}
+                    <div className="flex items-center gap-2 mb-1 text-sm">
+                      <span className="text-gray-600">👤</span>
+                      <span>주문: {order.customer.name} ({formatPhone(order.customer.phone)})</span>
+                    </div>
+                    
+                    {/* 리본문구 */}
+                    {order.product?.ribbon_text && order.product.ribbon_text.length > 0 && (
+                      <div className="flex items-center gap-2 mb-1 text-sm">
+                        <span className="text-gray-600">🎀</span>
+                        <span>리본문구: {order.product.ribbon_text[0]}</span>
+                      </div>
+                    )}
+                    
+                    {/* 받는분 */}
+                    <div className="flex items-center gap-2 mb-1 text-sm">
+                      <span className="text-gray-600">👤</span>
+                      <span>받는분: {order.recipient.name}</span>
+                    </div>
+                    
+                    {/* 주소 */}
+                    <div className="flex items-start gap-2 mb-1 text-sm">
+                      <span className="text-gray-600">📍</span>
+                      <span className="flex-1">
+                        {order.recipient.address.sigungu} {order.recipient.address.dong} {order.recipient.address.detail}
+                      </span>
+                    </div>
+                    
+                    {/* 시간 */}
+                    <div className="flex items-center gap-2 mb-2 text-sm">
+                      <span className="text-gray-600">📅</span>
+                      <span>
+                        {order.delivery?.date || formatDate(order.created_at).split(' ')[0]}
+                        {order.delivery?.time || ''}
+                      </span>
+                    </div>
+                    
+                    {/* 금액 및 버튼 */}
                     <div className="mt-3 pt-3 border-t">
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold">
-                          {formatCurrency((order as any).payment?.total || order.pricing?.final_amount || 0)}
-                        </span>
+                      <div className="text-2xl font-bold mb-2">
+                        ₩{((order as any).payment?.total || order.pricing?.final_amount || 0).toLocaleString()}
                       </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           setDeliveryCompleteOrder(order)
                         }}
-                        className="mt-2 w-full py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                        className="w-full py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 flex items-center justify-center gap-2"
                       >
-                        <Truck className="h-4 w-4" />
-                        배송완료 처리
+                        <span>🚚</span>
+                        <span>배송완료 처리</span>
                       </button>
                     </div>
                   </div>
@@ -637,9 +650,11 @@ export default function OrderAssignmentPage() {
           orderId={deliveryCompleteOrder.id}
           orderNumber={deliveryCompleteOrder.order_number}
           source={deliveryCompleteOrder.source}
+          orderData={deliveryCompleteOrder}
           onComplete={() => {
             setDeliveryCompleteOrder(null)
-            loadData()
+            toast.success('배송완료 처리되었습니다')
+            router.push('/orders')
           }}
         />
       )}
@@ -652,7 +667,8 @@ export default function OrderAssignmentPage() {
           orderData={funeralDeliveryCompleteOrder}
           onComplete={() => {
             setFuneralDeliveryCompleteOrder(null)
-            loadData()
+            toast.success('부고 주문 배송완료 처리되었습니다')
+            router.push('/orders')
           }}
         />
       )}

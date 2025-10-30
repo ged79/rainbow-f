@@ -419,9 +419,11 @@ const handleSaveRoomInfo = async () => {
   }
   try {
     const roomNumber = parseInt(currentPage.split('-')[1]);
+    const room = rooms.find(r => r.id === roomNumber);
     const funeralData = {
       funeral_home_id: funeralHomeId,
       room_number: roomNumber,
+      floor: room?.floor || '',
       deceased_name: deceasedName,
       deceased_hanja: deceasedNameHanja,
       age: deceasedAge ? parseInt(deceasedAge) : null,
@@ -980,68 +982,84 @@ onClick={async () => {
           <h2 className="text-xl font-bold">{room.name} {room.floor && `(${room.floor})`}</h2>
           <button onClick={() => setShowDetailModal(true)} className="bg-slate-600 text-white px-4 py-1 rounded text-sm hover:bg-slate-700">고인정보상세입력</button>
           <button 
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              console.log('=== 부고장 미리보기 시작 ===');
-              console.log('1. 고인이름:', deceasedName);
-              console.log('2. 고인나이:', deceasedAge);
-              console.log('3. 사진 여부:', deceasedPhoto ? '있음' : '없음');
-              console.log('4. 종교:', religion);
-              console.log('5. 발인시간:', funeralTime);
+              
+              console.log('[부고장] 1. 시작');
               
               if (!deceasedName) {
                 alert('고인 이름을 먼저 입력해주세요.');
                 return;
               }
               
-              // 데이터를 SessionStorage에 저장 (URL에 큰 데이터 전달 방지)
-              const obituaryData = {
-                deceasedName: deceasedName,
-                deceasedNameHanja: deceasedNameHanja,
-                deceasedAge: deceasedAge,
-                gender: deceasedGender,
-                religion: religion,
-                religionTitle: religionTitle,
-                placementTime: placementTime,
-                casketTime: casketTime,
-                shroudTime: shroudTime,
-                funeralTime: funeralTime,
-                deathTime: deathTime,
-                room: room.name + (room.floor ? ` (${room.floor})` : ''),
-                familyMembers: familyMembers,
-                chiefMessage: chiefMournerMessage,
-                burialType: burialType,
-                burialLocation: burialLocation,
-                photo: usePhotoInObituary ? deceasedPhoto : null,
-                bankAccounts: bankAccounts.filter(a => a.bankName || a.accountNumber || a.accountHolder)
-              };
+              const funeralHomeId = getFuneralHomeId();
+              console.log('[부고장] 2. funeralHomeId:', funeralHomeId);
               
-              console.log('6. 저장할 데이터:', obituaryData);
-              
-              // SessionStorage에 저장
-              sessionStorage.setItem('obituaryPreview', JSON.stringify(obituaryData));
-              
-              // 저장 확인
-              const saved = sessionStorage.getItem('obituaryPreview');
-              console.log('7. 저장 확인:', saved ? 'SessionStorage에 저장됨' : '저장 실패!');
-              
-              if (saved) {
-                console.log('8. 저장된 데이터 일부:', JSON.parse(saved).deceasedName);
+              if (!funeralHomeId) {
+                alert('로그인이 필요합니다.');
+                return;
               }
               
-              alert(`부고장 미리보기를 엽니다.\n고인: ${deceasedName}`);
-              
-              // 데이터 없이 URL만 전달 - MODERN 스타일로 이동
-              const url = `/obituary/modern`;
-              
               try {
-                const newWindow = window.open(url, '_blank');
-                if (!newWindow) {
-                  alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.');
+                const roomNumber = parseInt(currentPage.split('-')[1]);
+                console.log('[부고장] 3. roomNumber:', roomNumber);
+                
+                const funeralData = {
+                  funeral_home_id: funeralHomeId,
+                  room_number: roomNumber,
+                  deceased_name: deceasedName,
+                  deceased_hanja: deceasedNameHanja,
+                  age: deceasedAge ? parseInt(deceasedAge) : null,
+                  gender: deceasedGender,
+                  religion: religion,
+                  religion_title: religionTitle,
+                  placement_time: placementTime,
+                  casket_time: casketTime,
+                  shroud_time: shroudTime,
+                  funeral_time: funeralTime,
+                  checkout_time: checkoutTime,
+                  death_time: deathTime,
+                  placement_date: placementDate,
+                  burial_type: burialType,
+                  burial_location: burialLocation,
+                  burial_location_2: burialLocation2,
+                  death_cause: deathCause,
+                  death_place: deathPlace,
+                  chemical_treatment: chemicalTreatment,
+                  deceased_address: deceasedAddress,
+                  deceased_note: deceasedNote,
+                  resident_number: residentNumber,
+                  baptismal_name: baptismalName,
+                  other_title: otherTitle,
+                  business_note: businessNote,
+                  funeral_director: funeralDirector,
+                  funeral_company: funeralCompany,
+                  bank_accounts: bankAccounts.filter(a => a.bankName || a.accountNumber || a.accountHolder),
+                  use_photo_in_obituary: usePhotoInObituary,
+                  chief_message: chiefMournerMessage,
+                  photo_url: deceasedPhoto,
+                  family_members: familyMembers,
+                  status: 'active' as const
+                };
+                
+                console.log('[부고장] 4. 저장 시도');
+                const saved = await saveFuneral(funeralData);
+                console.log('[부고장] 5. 저장 결과:', saved);
+                
+                if (saved?.id) {
+                  const url = `/obituary/modern?id=${saved.id}`;
+                  console.log('[부고장] 6. 열 URL:', url);
+                  const newWindow = window.open(url, '_blank');
+                  if (!newWindow) {
+                    alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.');
+                  }
+                } else {
+                  console.error('[부고장] 7. ID 없음:', saved);
+                  alert('저장은 되었으나 ID를 받지 못했습니다. 다시 시도해주세요.');
                 }
               } catch (error) {
-                console.error('부고장 열기 실패:', error);
-                alert('부고장을 열 수 없습니다.');
+                console.error('[부고장] ERROR:', error);
+                alert('부고장을 열 수 없습니다: ' + (error as Error).message);
               }
             }} 
             className="bg-purple-700 text-white px-4 py-1 rounded text-sm hover:bg-purple-800"
@@ -1650,8 +1668,9 @@ onClick={async () => {
     <div className="flex bg-gray-100 min-h-screen">
       <div className="w-64 bg-gray-800 text-white p-4 overflow-y-auto">
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">영동병원</h2>
-          <p className="text-sm text-gray-400">장례식장 관리시스템</p>
+          <p className="text-xs text-gray-400 mb-2">의료법인 조은의료재단</p>
+          <h2 className="text-2xl font-bold mb-1">영동병원</h2>
+          <h3 className="text-2xl font-bold">장례식장</h3>
         </div>
         <nav className="space-y-2">
           <button onClick={() => setCurrentPage('dashboard')} className={`w-full text-left px-4 py-2 rounded ${currentPage === 'dashboard' ? 'bg-slate-600' : 'hover:bg-gray-700'}`}>현황판</button>

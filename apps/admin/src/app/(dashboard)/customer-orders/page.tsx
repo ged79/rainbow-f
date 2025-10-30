@@ -34,7 +34,6 @@ interface CustomerOrder {
   status: string
   assigned_store_id: string | null
   created_at: string
-  // 🏺 Funeral 관련 필드 추가
   order_source?: string
   funeral_id?: string
   funeral_data?: {
@@ -79,7 +78,6 @@ export default function CustomerOrdersPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    // 🏺 Funeral 필터 처리 추가
     if (filter === 'funeral') {
       query = query.eq('order_source', 'funeral')
     } else if (filter !== 'all') {
@@ -101,179 +99,49 @@ export default function CustomerOrdersPage() {
     const { data, error } = await supabase
       .from('stores')
       .select('*')
-      .eq('status', 'active')
-      .eq('is_open', true)
+      .eq('is_active', true)
+      .order('business_name')
 
-    if (!error) {
+    if (error) {
+      toast.error('화원 조회 실패')
+    } else {
       setStores(data || [])
     }
   }
 
-  const getEligibleStores = async (order: CustomerOrder) => {
-    const isFuneral = order.order_source === 'funeral'
-    
-    // 🏺 Funeral 주문 특별 처리
-    if (isFuneral) {
-      const funeralStores = stores.filter(store => 
-        store.service_areas?.some(area => 
-          area.includes('영동') || 
-          area.includes('충북') ||
-          area.includes('충청북도')
-        )
-      )
-      return funeralStores
-    }
-
-    // 기존 로직 그대로
-    if (!order.recipient_address?.sigungu) return []
-
-    const orderPrice = order.mapped_price || 0
-    const productType = order.mapped_category
-    const address = order.recipient_address
-
-    // OPTIMIZED: Single query using materialized view
-    const { data: eligibleData, error } = await supabase
-      .from('store_service_coverage')
-      .select('store_id, business_name, store_phone, price_basic')
-      .eq('area_name', `${address.sido} ${address.sigungu}`)
-      .eq('product_type', productType)
-      .eq('is_available', true)
-      .gte('price_basic', orderPrice)
-
-    if (error) {
-      console.error('Coverage view error, using fallback:', error)
-      // Fallback to original N+1 method if view fails
-      const regionalStores = stores.filter(store =>
-        store.service_areas?.some(area =>
-          area.includes(address.sigungu)
-        )
-      )
-      const eligible: Store[] = []
-      for (const store of regionalStores) {
-        const { data: pricingData } = await supabase
-          .from('store_area_product_pricing')
-          .select('price')
-          .eq('store_id', store.id)
-          .eq('area_name', `${address.sido} ${address.sigungu}`)
-          .eq('product_name', productType)
-          .single()
-        const minPrice = pricingData?.price || 50000
-        if (orderPrice >= minPrice) {
-          eligible.push(store)
-        }
-      }
-      return eligible
-    }
-
-    // Transform to match Store interface
-    const eligible = eligibleData?.map(s => ({
-      id: s.store_id,
-      business_name: s.business_name,
-      owner_name: '', // Not in view, but not used in UI
-      phone: s.store_phone,
-      service_areas: [`${address.sido} ${address.sigungu}`],
-      is_open: true
-    })) || []
-    
-    return eligible
-  }
-
-  const openAssignModal = async (order: CustomerOrder) => {
+  const openAssignModal = (order: CustomerOrder) => {
     setSelectedOrder(order)
-    setPriceWarning('')
-    setEligibleStores([])
     setLoadingStores(true)
+    setPriceWarning('')
     
-    try {
-      const eligible = await getEligibleStores(order)
-      setEligibleStores(eligible)
-      
-      if (eligible.length === 0) {
-        const isFuneral = order.order_source === 'funeral'
-        if (isFuneral) {
-          setPriceWarning('영동군 지역에 배정 가능한 화원이 없습니다.')
-        } else {
-          setPriceWarning(
-            `주문 금액 (${order.mapped_price?.toLocaleString()}원)이 ` +
-            `모든 화원의 최소 금액보다 낮습니다.`
-          )
-        }
-      }
-    } catch (error) {
-      console.error('Error loading eligible stores:', error)
-      setPriceWarning('화원 정보를 불러올 수 없습니다.')
-    } finally {
-      setLoadingStores(false)
-    }
+    const addressArea = order.recipient_address?.sigungu || order.recipient_address?.dong || ''
+    const eligible = stores.filter(store =>
+      store.service_areas.some(area => addressArea.includes(area) || area.includes(addressArea))
+    )
+    
+    setEligibleStores(eligible)
+    setLoadingStores(false)
   }
 
   const assignOrder = async () => {
-    if (!selectedOrder || !selectedStore) {
-      toast.error('주문과 화원을 선택하세요')
-      return
-    }
+    if (!selectedOrder || !selectedStore) return
 
     try {
-      console.log('Assigning order:', selectedOrder.order_number)
-      
-      const { data: newOrder, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: selectedOrder.order_number,
-          sender_store_id: '00000000-0000-0000-0000-000000000000',
-          receiver_store_id: selectedStore,
-          type: 'send',
-          customer: {
-            name: selectedOrder.customer_name,
-            phone: selectedOrder.customer_phone
-          },
-          recipient: {
-            name: selectedOrder.recipient_name,
-            phone: selectedOrder.recipient_phone,
-            address: selectedOrder.recipient_address
-          },
-          product: {
-            type: selectedOrder.mapped_category,
-            name: selectedOrder.product_name,
-            price: selectedOrder.mapped_price,
-            quantity: selectedOrder.quantity,
-            ribbon_text: selectedOrder.ribbon_text,
-            special_instructions: selectedOrder.special_instructions,
-            original_image: selectedOrder.product_image,
-            original_name: selectedOrder.product_name,
-            original_price: selectedOrder.original_price
-          },
-          payment: {
-            subtotal: selectedOrder.mapped_price,
-            commission: Math.floor(selectedOrder.mapped_price * 0.25),
-            total: selectedOrder.total_amount,
-            points_used: selectedOrder.discount_amount || 0,
-            discount_amount: selectedOrder.discount_amount || 0,
-            points_earned: selectedOrder.points_earned || 0
-          },
-          delivery_date: selectedOrder.delivery_date,
-          delivery_time: selectedOrder.delivery_time,
-          status: 'pending'
-        })
-        .select()
-        .single()
-
-      if (orderError) throw orderError
+      const store = stores.find(s => s.id === selectedStore)
+      if (!store) throw new Error('화원 정보 없음')
 
       const { error: updateError } = await supabase
         .from('customer_orders')
         .update({
           status: 'assigned',
           assigned_store_id: selectedStore,
-          assigned_at: new Date().toISOString(),
-          linked_order_id: newOrder.id
+          assigned_at: new Date().toISOString()
         })
         .eq('id', selectedOrder.id)
 
       if (updateError) throw updateError
 
-      const isFuneral = selectedOrder.order_source === 'funeral'
-      toast.success(`${isFuneral ? '장례' : ''} 주문이 배정되었습니다`)
+      toast.success('주문이 배정되었습니다')
       setSelectedOrder(null)
       setSelectedStore('')
       fetchOrders()
@@ -283,20 +151,15 @@ export default function CustomerOrdersPage() {
     }
   }
 
-  // 🏺 긴급도 체크 함수
-  const isUrgent = (order: CustomerOrder): boolean => {
-    if (order.order_source === 'funeral') {
-      const hoursSince = (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60)
-      return hoursSince > 3 // 3시간 경과시 긴급
-    }
-    return false
+  const formatDeliveryTime = (time: string) => {
+    if (time.startsWith('즉시')) return time
+    return time
   }
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">B2C 주문 관리</h1>
       
-      {/* 🏺 Funeral 필터 추가 */}
       <div className="mb-4 flex gap-2">
         <button
           className={`px-4 py-2 rounded ${filter === 'pending' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
@@ -316,198 +179,110 @@ export default function CustomerOrdersPage() {
         >
           전체
         </button>
-        <button
-          className={`px-4 py-2 rounded ${filter === 'funeral' ? 'bg-purple-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setFilter('funeral')}
-        >
-          🏺 장례
-        </button>
       </div>
 
       {loading ? (
         <div>로딩중...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">주문번호</th>
-                <th className="px-4 py-3 text-left">상품</th>
-                <th className="px-4 py-3 text-left">고객</th>
-                <th className="px-4 py-3 text-left">수령인</th>
-                <th className="px-4 py-3 text-left">배송일</th>
-                <th className="px-4 py-3 text-left">원가</th>
-                <th className="px-4 py-3 text-left">할인</th>
-                <th className="px-4 py-3 text-left">결제액</th>
-                <th className="px-4 py-3 text-left">상태</th>
-                <th className="px-4 py-3 text-left">작업</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => {
-                const isFuneral = order.order_source === 'funeral'
-                const funeralData = order.funeral_data || {}
-                
-                return (
-                  <tr key={order.id} className={`border-t ${isFuneral ? 'bg-purple-50' : ''}`}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {isFuneral && (
-                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
-                            장례
-                          </span>
-                        )}
-                        <span className="font-mono text-sm">{order.order_number}</span>
-                      </div>
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <img 
-                          src={order.product_image || '/placeholder.jpg'} 
-                          alt={order.product_name}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                        <div>
-                          <div>{order.product_name}</div>
-                          <div className="text-sm text-gray-500">
-                            {order.mapped_category}
-                          </div>
-                          {isFuneral && funeralData.ribbon_message && (
-                            <div className="text-xs text-purple-600 mt-1">
-                              "{funeralData.ribbon_message}"
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <div>{order.customer_name}</div>
-                      <div className="text-sm text-gray-500">{order.customer_phone}</div>
-                      {isFuneral && funeralData.sender_name && funeralData.sender_name !== order.customer_name && (
-                        <div className="text-xs text-purple-600">
-                          보내는분: {funeralData.sender_name}
-                        </div>
-                      )}
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <div>{order.recipient_name}</div>
-                      <div className="text-sm text-gray-500">
-                        {isFuneral ? 
-                          funeralData.funeral_hall || '영동병원장례식장' :
-                          order.recipient_address?.sigungu
-                        }
-                      </div>
-                      {isFuneral && funeralData.deceased_name && (
-                        <div className="text-xs text-purple-600">
-                          故 {funeralData.deceased_name}
-                        </div>
-                      )}
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <div>{order.delivery_date}</div>
-                      {isFuneral && (
-                        <div className="text-xs text-orange-600 font-medium">
-                          당일배송
-                        </div>
-                      )}
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <div className="text-sm">
-                        {order.original_price?.toLocaleString() || '-'}원
-                      </div>
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-red-600">
-                        {order.discount_amount > 0 ? `-${order.discount_amount.toLocaleString()}원` : '-'}
-                      </div>
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <div className="font-medium">
-                        {order.total_amount.toLocaleString()}원
-                      </div>
-                      {order.points_earned > 0 && (
-                        <div className="text-xs text-green-600">
-                          +{order.points_earned.toLocaleString()}P
-                        </div>
-                      )}
-                      {isFuneral && (
-                        <div className="text-xs text-purple-600">
-                          수수료: {Math.floor(order.total_amount * 0.25).toLocaleString()}원
-                        </div>
-                      )}
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-sm ${
-                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        order.status === 'assigned' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {order.status === 'pending' ? '대기' :
-                         order.status === 'assigned' ? '배정됨' : '완료'}
-                      </span>
-                      {isUrgent(order) && (
-                        <div className="text-xs text-red-600 mt-1 font-medium">
-                          긴급
-                        </div>
-                      )}
-                    </td>
-                    
-                    <td className="px-4 py-3">
-                      {order.status === 'pending' && (
-                        <button
-                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                          onClick={() => openAssignModal(order)}
-                        >
-                          배정
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {orders.map((order) => (
+            <div key={order.id} className="bg-white rounded-lg shadow p-4">
+              {/* 헤더: 주문번호 + 상태 */}
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-600">#{order.order_number}</span>
+                  <span className="text-xs text-gray-500">{order.status === 'pending' ? '홈페이지' : ''}</span>
+                </div>
+                <span className="text-sm text-gray-500">
+                  {new Date(order.created_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+                </span>
+              </div>
+
+              {/* 상품명 */}
+              <div className="font-bold text-lg mb-2">
+                {order.product_name}
+              </div>
+
+              {/* 주문자 + 리본문구 */}
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">👤</span>
+                  <span className="text-sm">주문: {order.customer_name} ({order.customer_phone})</span>
+                </div>
+                {order.ribbon_text && order.ribbon_text.length > 0 && (
+                  <span className="text-sm text-purple-600 font-medium">
+                    {order.ribbon_text[0]}
+                  </span>
+                )}
+              </div>
+
+              {/* 받는분 */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-gray-600">👤</span>
+                <span className="text-sm">받는분: {order.recipient_name} ({order.recipient_phone})</span>
+              </div>
+
+              {/* 주소 */}
+              <div className="flex items-start gap-2 mb-2">
+                <span className="text-gray-600">📍</span>
+                <span className="text-sm">
+                  {typeof order.recipient_address === 'object' 
+                    ? `${order.recipient_address.dong} ${order.recipient_address.detail}`.trim()
+                    : order.recipient_address}
+                </span>
+              </div>
+
+              {/* 배송시간 */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-gray-600">📅</span>
+                <span className="text-sm">
+                  {order.delivery_date}{formatDeliveryTime(order.delivery_time)}
+                </span>
+              </div>
+
+              {/* 금액 */}
+              <div className="text-2xl font-bold mb-3">
+                ₩{order.total_amount.toLocaleString()}
+              </div>
+
+              {/* 배송완료 처리 버튼 */}
+              {order.status === 'pending' && (
+                <button
+                  className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2"
+                  onClick={() => openAssignModal(order)}
+                >
+                  <span>🚚</span>
+                  <span>배송완료 처리</span>
+                </button>
+              )}
+              
+              {order.status === 'assigned' && (
+                <div className="w-full py-2 bg-gray-100 text-gray-500 rounded text-center">
+                  배정 완료
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
+      {/* 배정 모달 */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <h2 className="text-xl font-bold mb-4">
-              {selectedOrder.order_source === 'funeral' ? '🏺 장례 화원 배정' : '화원 배정'}
-            </h2>
+            <h2 className="text-xl font-bold mb-4">화원 배정</h2>
             
             <div className="mb-4">
               <p>주문번호: {selectedOrder.order_number}</p>
               <p>상품: {selectedOrder.product_name}</p>
-              {selectedOrder.order_source === 'funeral' ? (
-                <p>배송지: {selectedOrder.funeral_data?.funeral_hall || '영동병원장례식장'}</p>
-              ) : (
-                <p>배송지: {selectedOrder.recipient_address?.sigungu}</p>
-              )}
-              {selectedOrder.order_source === 'funeral' && (
-                <p className="text-purple-600 text-sm mt-2">
-                  ⚠️ 장례 주문은 당일 배송이 필요합니다
-                </p>
-              )}
+              <p>배송지: {typeof selectedOrder.recipient_address === 'object' 
+                ? selectedOrder.recipient_address.dong
+                : selectedOrder.recipient_address}</p>
             </div>
 
             {loadingStores ? (
               <div className="text-center py-4 text-gray-500 mb-4">
                 화원 확인 중...
-              </div>
-            ) : priceWarning ? (
-              <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
-                <p className="text-red-600 text-sm font-medium">⚠️ 배정 불가</p>
-                <p className="text-red-500 text-sm mt-1">{priceWarning}</p>
               </div>
             ) : (
               <select
@@ -515,10 +290,7 @@ export default function CustomerOrdersPage() {
                 value={selectedStore}
                 onChange={(e) => setSelectedStore(e.target.value)}
               >
-                <option value="">
-                  화원 선택 ({eligibleStores.length}개 가능)
-                  {selectedOrder.order_source === 'funeral' && ' - 영동군 지역'}
-                </option>
+                <option value="">화원 선택 ({eligibleStores.length}개 가능)</option>
                 {eligibleStores.map((store) => (
                   <option key={store.id} value={store.id}>
                     {store.business_name} - {store.owner_name}
@@ -538,11 +310,11 @@ export default function CustomerOrdersPage() {
                 취소
               </button>
               <button
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
                 onClick={assignOrder}
-                disabled={!selectedStore || priceWarning !== ''}
+                disabled={!selectedStore}
               >
-                {priceWarning ? '배정 불가' : '배정하기'}
+                배정하기
               </button>
             </div>
           </div>

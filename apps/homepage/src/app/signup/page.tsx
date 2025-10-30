@@ -38,7 +38,6 @@ function SignupForm() {
   
   // SMS 인증 관련 state
   const [verificationCode, setVerificationCode] = useState('')
-  const [sentCode, setSentCode] = useState('')
   const [isCodeSent, setIsCodeSent] = useState(false)
   const [isPhoneVerified, setIsPhoneVerified] = useState(false)
   const [isSendingCode, setIsSendingCode] = useState(false)
@@ -108,7 +107,7 @@ function SignupForm() {
     }
   }, [countdown])
   
-  // 인증번호 전송
+  // 인증번호 전송 (서버 측 처리)
   const sendVerificationCode = async () => {
     if (!formData.phone || formData.phone.length !== 13) {
       alert('전화번호를 정확히 입력해주세요')
@@ -117,37 +116,34 @@ function SignupForm() {
     
     setIsSendingCode(true)
     
-    // 6자리 랜덤 코드 생성
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    setSentCode(code)
-    
     try {
-      const response = await fetch('/api/sms/send', {
+      const response = await fetch('/api/sms/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: formData.phone,
-          message: `[무지개꽃] 인증번호: ${code}\n3분 이내에 입력해주세요.`
+          phone: formData.phone
         })
       })
       
-      if (response.ok) {
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
         setIsCodeSent(true)
-        setCountdown(180) // 3분 타이머
+        setCountdown(data.expiresIn || 180) // 서버에서 받은 유효시간
         alert('인증번호가 전송되었습니다')
       } else {
-        alert('인증번호 전송에 실패했습니다')
+        alert(data.error || '인증번호 전송에 실패했습니다')
       }
     } catch (error) {
       console.error('SMS 전송 오류:', error)
-      alert('인증번호 전송에 실패했습니다')
+      alert('인증번호 전송 중 오류가 발생했습니다')
     } finally {
       setIsSendingCode(false)
     }
   }
   
-  // 인증번호 확인
-  const verifyCode = () => {
+  // 인증번호 확인 (서버 측 검증)
+  const verifyCode = async () => {
     if (!verificationCode) {
       alert('인증번호를 입력해주세요')
       return
@@ -158,12 +154,32 @@ function SignupForm() {
       return
     }
     
-    if (verificationCode === sentCode) {
-      setIsPhoneVerified(true)
-      setCountdown(0)
-      alert('전화번호 인증이 완료되었습니다')
-    } else {
-      alert('인증번호가 일치하지 않습니다')
+    try {
+      const response = await fetch('/api/sms/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: formData.phone,
+          code: verificationCode
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok && data.verified) {
+        setIsPhoneVerified(true)
+        setCountdown(0)
+        alert('전화번호 인증이 완료되었습니다')
+      } else {
+        const errorMsg = data.error || '인증번호가 일치하지 않습니다'
+        const remainingMsg = data.remainingAttempts !== undefined 
+          ? `\n남은 시도: ${data.remainingAttempts}회`
+          : ''
+        alert(errorMsg + remainingMsg)
+      }
+    } catch (error) {
+      console.error('인증 확인 오류:', error)
+      alert('인증 확인 중 오류가 발생했습니다')
     }
   }
 
@@ -173,6 +189,12 @@ function SignupForm() {
     // 유효성 검사
     if (!formData.phone || !formData.password || !formData.name) {
       alert('필수 정보를 모두 입력해주세요')
+      return
+    }
+
+    // ✅ 전화번호 인증 필수 체크
+    if (!isPhoneVerified) {
+      alert('전화번호 인증을 완료해주세요')
       return
     }
 
@@ -356,6 +378,7 @@ function SignupForm() {
                   placeholder="010-1234-5678"
                   maxLength={13}
                   required
+                  disabled={isPhoneVerified}
                 />
                 {isCheckingPoints && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -363,6 +386,52 @@ function SignupForm() {
                   </div>
                 )}
               </div>
+              
+              {/* SMS 인증 버튼 */}
+              {!isPhoneVerified && formData.phone.length === 13 && (
+                <button
+                  type="button"
+                  onClick={sendVerificationCode}
+                  disabled={isSendingCode || (isCodeSent && countdown > 0)}
+                  className="mt-2 w-full py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSendingCode ? '전송 중...' : isCodeSent ? `재전송 (${Math.floor(countdown / 60)}:${(countdown % 60).toString().padStart(2, '0')})` : '인증번호 전송'}
+                </button>
+              )}
+              
+              {/* 인증번호 입력 */}
+              {isCodeSent && !isPhoneVerified && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="인증번호 6자리"
+                      maxLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={verifyCode}
+                      className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      확인
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    남은 시간: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+                  </p>
+                </div>
+              )}
+              
+              {/* 인증 완료 표시 */}
+              {isPhoneVerified && (
+                <div className="mt-2 flex items-center gap-2 text-green-600 text-sm">
+                  <Check className="w-4 h-4" />
+                  <span>전화번호 인증 완료</span>
+                </div>
+              )}
             </div>
 
             {/* 이메일 */}

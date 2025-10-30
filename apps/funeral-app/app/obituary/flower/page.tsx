@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { ArrowLeft, Flower, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,6 +24,8 @@ export default function FuneralFlowerPage() {
   const [products, setProducts] = useState<Record<string, Product[]>>({})
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const funeralId = searchParams.get('id')
 
   useEffect(() => {
     loadProducts()
@@ -73,11 +75,16 @@ export default function FuneralFlowerPage() {
     const room = parsed?.room || '빈소'
     const deceasedName = parsed?.deceasedName || ''
     
+    // 영동병원장례식장 주소
+    const funeralAddress = '충청북도 영동군 영동읍 대학로 106'
+    const funeralPostal = '29145'
+    
     // Use environment variable for homepage URL (defaults to localhost for development)
     const homepageUrl = process.env.NEXT_PUBLIC_HOMEPAGE_URL || 'http://localhost:3000'
     
     // Redirect to homepage with funeral context and auto-open order modal
-    window.location.href = `${homepageUrl}/order?id=${productId}&autoOrder=true&funeral=true&room=${encodeURIComponent(room)}&deceased=${encodeURIComponent(deceasedName)}`
+    const funeralParam = funeralId ? `&funeral_id=${funeralId}` : ''
+    window.location.href = `${homepageUrl}/order?id=${productId}&autoOrder=true&funeral=true&room=${encodeURIComponent(room)}&deceased=${encodeURIComponent(deceasedName)}&address=${encodeURIComponent(funeralAddress)}&postal=${funeralPostal}${funeralParam}`
   }
 
   const categoryOrder = Object.keys(products).sort((a, b) => {
@@ -106,7 +113,13 @@ export default function FuneralFlowerPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-[#2c3e50] border-b-2 border-slate-300 shadow-md sticky top-0 z-50 overflow-hidden py-2">
-        <div className="max-w-7xl mx-auto cursor-pointer" onClick={() => router.push('/obituary/modern')}>
+        <div className="max-w-7xl mx-auto cursor-pointer" onClick={() => {
+          if (funeralId) {
+            router.push(`/obituary/modern?id=${funeralId}`)
+          } else {
+            router.push('/obituary/modern')
+          }
+        }}>
           <img 
             src="/header.png" 
             alt="영동병원장례식장" 

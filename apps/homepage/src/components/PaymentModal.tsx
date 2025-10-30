@@ -73,9 +73,15 @@ export default function PaymentModal({
       }
 
       const parsedOrder = JSON.parse(pendingOrder)
+      console.log('[PAYMENT DEBUG]', {
+        parsedOrder,
+        phone: parsedOrder.customer_phone,
+        normalized: parsedOrder.customer_phone?.replace(/[^0-9]/g, '')
+      })
+      
       const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_yL0qZ4G1VOdm2dzkPzqoroWb2MQY'
+      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm'
       const tossPayments = window.TossPayments(clientKey)
       
       // 공통 파라미터
@@ -88,13 +94,18 @@ export default function PaymentModal({
         failUrl: `${window.location.origin}/payment/fail`,
       }
 
+      // 전화번호 (필수)
+      if (parsedOrder.customer_phone) {
+        paymentOptions.customerMobilePhone = parsedOrder.customer_phone.replace(/[^0-9]/g, '')
+      }
+
+      console.log('[PAYMENT PARAMS]', paymentOptions)
+      console.log('[PAYMENT METHOD]', selectedMethod)
+      console.log('[CLIENT KEY]', clientKey)
+
       // 가상계좌 추가 파라미터
       if (selectedMethod === '가상계좌') {
         paymentOptions.validHours = 72
-        if (parsedOrder.customer_phone) {
-          // 숫자만 추출 (하이픈 제거)
-          paymentOptions.customerMobilePhone = parsedOrder.customer_phone.replace(/[^0-9]/g, '')
-        }
         if (parsedOrder.customer_email) {
           paymentOptions.customerEmail = parsedOrder.customer_email
         }

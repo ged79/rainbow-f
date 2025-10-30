@@ -21,42 +21,20 @@ export async function POST(request: NextRequest) {
     const NHN_SMS_SENDER = process.env.NHN_SMS_SENDER
 
     if (!NHN_SMS_APP_KEY || !NHN_SMS_SECRET_KEY || !NHN_SMS_SENDER) {
-      // NHN Cloud 설정이 없으면 알리고 API 사용
-      const formData = new FormData()
-      formData.append('key', process.env.ALIGO_API_KEY!)
-      formData.append('user_id', process.env.ALIGO_USER_ID!)
-      formData.append('sender', process.env.ALIGO_SENDER!)
-      formData.append('receiver', to.replace(/-/g, ''))
-      formData.append('msg', message)
-      formData.append('testmode_yn', process.env.NODE_ENV === 'development' ? 'Y' : 'N')
-
-      const response = await fetch('https://apis.aligo.in/send/', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-      console.log('[Aligo Response]', result)
-
-      if (result.result_code === 1 || result.result_code === '1') {
-        return NextResponse.json({ success: true, message: 'SMS 발송 완료' })
-      } else {
-        console.error('[SMS Error]', result)
-        return NextResponse.json({ 
-          error: 'SMS 발송 실패', 
-          details: result.message 
-        }, { status: 500 })
-      }
+      return NextResponse.json({ 
+        error: 'NHN Cloud SMS 설정이 필요합니다' 
+      }, { status: 500 })
     }
 
-    // NHN Cloud SMS API 호출
-    const response = await fetch(`https://api-sms.cloud.toast.com/sms/v3.0/appKeys/${NHN_SMS_APP_KEY}/sender/sms`, {
+    // NHN Cloud LMS API 호출
+    const response = await fetch(`https://api-sms.cloud.toast.com/sms/v3.0/appKeys/${NHN_SMS_APP_KEY}/sender/mms`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json;charset=UTF-8',
         'X-Secret-Key': NHN_SMS_SECRET_KEY,
       },
       body: JSON.stringify({
+        title: '무지개꽃 알림',
         body: message,
         sendNo: NHN_SMS_SENDER,
         recipientList: [

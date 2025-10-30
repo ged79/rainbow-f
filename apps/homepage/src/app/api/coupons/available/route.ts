@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rateLimit'
+import { verifyAuth, verifyPhoneMatch } from '@/lib/auth/verify'
 
-// GET: User's available coupons/points
+// GET: User's available coupons/points - 공개 API로 변경 (전화번호만 확인)
 export async function GET(request: NextRequest) {
   // Rate limiting: 포인트 조회 (IP당 분당 30회)
   const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
@@ -26,16 +27,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const normalizedPhone = phone.replace(/-/g, '')
-    const phoneWithDash = normalizedPhone.length === 11 
-      ? `${normalizedPhone.slice(0,3)}-${normalizedPhone.slice(3,7)}-${normalizedPhone.slice(7)}`
-      : normalizedPhone.length === 10 
-      ? `${normalizedPhone.slice(0,3)}-${normalizedPhone.slice(3,6)}-${normalizedPhone.slice(6)}`
-      : phone
 
+    // 전화번호로 포인트 조회 (인증 없이)
     const { data: coupons, error } = await supabaseAdmin
       .from('coupons')
       .select('*')
-      .or(`customer_phone.eq.${normalizedPhone},customer_phone.eq.${phoneWithDash}`)
+      .eq('customer_phone', normalizedPhone)
       .is('used_at', null)
       .gte('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
