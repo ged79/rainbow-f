@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
 
     // Production: verify with Toss
     console.log('🏭 프로덕션 모드 - Toss 검증')
-    
+
     const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
       method: 'POST',
       headers: {
@@ -229,10 +229,15 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json()
 
+    console.log('💳 Toss 응답 상태:', response.status)
+    console.log('💳 Toss 응답 본문:', JSON.stringify(result, null, 2))
+
     if (response.ok) {
-      const { data: order } = await supabaseAdmin
+      console.log('✅ Toss 검증 성공 - 주문 업데이트 시작')
+
+      const { data: order, error: updateError } = await supabaseAdmin
         .from('customer_orders')
-        .update({ 
+        .update({
           status: 'pending',
           payment_status: 'completed',
           payment_key: paymentKey
@@ -241,16 +246,76 @@ export async function POST(request: NextRequest) {
         .select()
         .single()
 
-      if (order) {
-        await sendOrderConfirmSMS(order)
-        await sendDeliveryNotificationSMS(order)
+      if (updateError) {
+        console.error('❌ 주문 업데이트 실패:', updateError)
+        return NextResponse.json({
+          success: false,
+          error: 'Order update failed',
+          details: updateError
+        }, { status: 500 })
       }
+
+      if (!order) {
+        console.error('❌ 주문을 찾을 수 없음. orderId:', orderId)
+        return NextResponse.json({
+          success: false,
+          error: 'Order not found'
+        }, { status: 404 })
+      }
+
+      console.log('✅ 주문 업데이트 완료:', order.order_number)
+
+      // Create points after successful payment ONLY if no discount was used
+      if (order.discount_amount === 0) {
+        const hasReferrer = order.referrer_phone && order.referrer_phone !== order.customer_phone
+        const buyerRate = hasReferrer ? 0.05 : 0.03
+        const buyerPoints = Math.floor(order.total_amount * buyerRate)
+
+        if (buyerPoints > 0) {
+          await supabaseAdmin.from('coupons').insert({
+            code: `CP${Date.now().toString(36).toUpperCase()}`,
+            customer_phone: order.customer_phone,
+            amount: buyerPoints,
+            type: 'purchase',
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            order_id: order.id
+          })
+          console.log('💰 구매자 포인트 적립:', buyerPoints)
+        }
+
+        if (hasReferrer) {
+          const referrerPoints = Math.floor(order.total_amount * 0.03)
+          await supabaseAdmin.from('coupons').insert({
+            code: `CP${Date.now().toString(36).toUpperCase()}`,
+            customer_phone: order.referrer_phone,
+            amount: referrerPoints,
+            type: 'referral',
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            order_id: order.id
+          })
+          console.log('💰 추천인 포인트 적립:', referrerPoints)
+        }
+      }
+
+      await sendOrderConfirmSMS(order)
+      await sendDeliveryNotificationSMS(order)
+
+      const duration = Date.now() - startTime
+      console.log(`💳 결제 처리 완료 (${duration}ms)`)
+
+      return NextResponse.json({
+        success: true,
+        payment: result
+      })
+    } else {
+      console.error('❌ Toss 검증 실패:', result)
+      processedOrders.delete(requestId)
+      return NextResponse.json({
+        success: false,
+        error: 'Toss payment verification failed',
+        tossError: result
+      }, { status: response.status })
     }
-
-    const duration = Date.now() - startTime
-    console.log(`💳 결제 처리 완료 (${duration}ms)`)
-
-    return NextResponse.json({ success: true, payment: result })
     
   } catch (error: any) {
     console.error('❌ 결제 확인 오류:', error.message, error.stack)
