@@ -1,0 +1,20 @@
+# https://rainbow-f.kr robots.txt
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://rainbow-f.kr/sitemap.xml
+
+# 네이버 봇
+User-agent: Yeti
+Allow: /
+
+# 구글 봇
+User-agent: Googlebot
+Allow: /
+
+# 크롤링 제외할 경로 (필요시 추가)
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/

@@ -47,6 +47,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* 네이버 서치어드바이저 소유권 확인 메타태그 */}
+        <meta name="naver-site-verification" content="319f36ba36b19fb7a27fd570a50cd3349623ac23" />
+
         {/* PWA 메타 태그 */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#10b981" />
