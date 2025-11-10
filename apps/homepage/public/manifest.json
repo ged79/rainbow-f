@@ -1,7 +1,7 @@
 {
-  "name": "RAINBOW-F 꽃배달 플랫폼",
-  "short_name": "RAINBOW-F",
-  "description": "전국 꽃배달 주문 서비스 - 축하화환, 근조화환, 꽃다발",
+  "name": "레인보우꽃집 | 전국 당일 꽃배송",
+  "short_name": "레인보우꽃집",
+  "description": "레인보우꽃집(무지개꽃집) - 축하화환, 근조화환, 개업화환, 결혼식화환, 꽃다발 전국 당일배송",
   "theme_color": "#10b981",
   "background_color": "#ffffff",
   "display": "standalone",

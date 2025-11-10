@@ -4,9 +4,9 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import Footer from '../components/Footer'
 
 export const metadata: Metadata = {
-  title: 'RAINBOW-F - 전국 당일 꽃배송',
-  description: '축하화환, 근조화환, 꽃다발 전국 당일배송. 화원 직거래로 합리적인 가격',
-  keywords: '꽃배달, 화환, 근조화환, 축하화환, 꽃다발, 꽃바구니, 당일배송, 레인보우에프',
+  title: '레인보우꽃집 | 전국 당일 꽃배송 - RAINBOW-F',
+  description: '레인보우꽃집(무지개꽃집) - 축하화환, 근조화환, 개업화환, 결혼식화환, 꽃다발 전국 당일배송. 화원 직거래로 합리적인 가격',
+  keywords: '레인보우꽃집, 무지개꽃집, 꽃배달, 화환, 근조화환, 축하화환, 개업화환, 결혼식화환, 장례식화환, 꽃다발, 꽃바구니, 당일배송, 레인보우에프, RAINBOW-F',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -14,17 +14,17 @@ export const metadata: Metadata = {
     title: 'RAINBOW-F',
   },
   openGraph: {
-    title: 'RAINBOW-F - 꽃배달 플랫폼',
-    description: '전국 당일 꽃배송 서비스',
-    url: 'https://rainbow-f.co.kr',
-    siteName: 'RAINBOW-F',
+    title: '레인보우꽃집 | 전국 당일 꽃배송',
+    description: '무지개꽃집 - 축하화환, 근조화환, 개업화환, 꽃다발 전국 당일배송',
+    url: 'https://rainbow-f.kr',
+    siteName: '레인보우꽃집 RAINBOW-F',
     images: ['/og-image.png'],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'RAINBOW-F',
-    description: '전국 당일 꽃배송',
+    title: '레인보우꽃집 | 전국 당일 꽃배송',
+    description: '무지개꽃집 - 축하화환, 근조화환, 개업화환, 꽃다발 전국 당일배송',
   },
   robots: {
     index: true,
