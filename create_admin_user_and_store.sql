@@ -1,0 +1,65 @@
+-- Admin user 생성
+INSERT INTO auth.users (
+  id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  created_at,
+  updated_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  is_super_admin,
+  role
+) VALUES (
+  '00000000-0000-0000-0000-000000000000',
+  'admin@system.local',
+  crypt('admin123', gen_salt('bf')),
+  NOW(),
+  NOW(),
+  NOW(),
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
+  '{"name": "System Admin"}'::jsonb,
+  false,
+  'authenticated'
+) ON CONFLICT (id) DO NOTHING;
+
+-- Admin store 생성
+INSERT INTO stores (
+  id,
+  user_id,
+  store_code,
+  business_name,
+  owner_name,
+  business_license,
+  phone,
+  email,
+  address,
+  service_areas,
+  points_balance,
+  commission_rate,
+  bank_name,
+  account_number,
+  account_holder,
+  status,
+  is_open,
+  created_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000000000',
+  'ADMIN',
+  '본사',
+  '관리자',
+  '000-00-00000',
+  '02-1234-5678',
+  'admin@flower.com',
+  '{"sido": "서울", "sigungu": "강남구", "dong": "역삼동"}'::jsonb,
+  ARRAY['전국'],
+  0,
+  0,
+  '',
+  '',
+  '',
+  'active',
+  true,
+  NOW()
+) ON CONFLICT (id) DO NOTHING;

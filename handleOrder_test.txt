@@ -1,0 +1,29 @@
+  // TEST MODE: Skip payment modal and go directly to order
+  const handleOrder = async () => {
+    if (!product || !product.name) {
+      alert('상품 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
+    if (!orderData.customer_name || !orderData.customer_phone) {
+      alert('주문자 정보를 입력해주세요.')
+      return
+    }
+    if (!orderData.recipient_name || !orderData.recipient_phone) {
+      alert('수령인 정보를 입력해주세요.')
+      return
+    }
+    
+    const address = orderData.recipient_address
+    if (!address || (typeof address === 'object' && !address.dong)) {
+      alert('배송 주소를 입력해주세요.')
+      return
+    }
+    
+    if (!detailAddress || detailAddress.trim() === '') {
+      alert('상세주소를 입력해주세요. (예: 101동 202호, 2층, ○○아파트 등)')
+      return
+    }
+    
+    // TEST MODE: Skip payment, go directly to order creation
+    await handlePaymentSuccess('TEST_MODE_' + Date.now())
+  }

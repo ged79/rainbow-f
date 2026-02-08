@@ -1,0 +1,7 @@
+// order/page.tsx의 추천 상품 부분을 실제 배송 사례로 교체
+// recommendedProducts 관련 코드를 찾아서 다음으로 교체:
+
+import DeliveryExamples from '../../components/DeliveryExamples'
+
+// JSX 부분에서 추천상품 섹션 대신:
+<DeliveryExamples category={product?.category} />

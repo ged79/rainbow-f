@@ -1,0 +1,11 @@
+{
+  "name": "image-optimizer",
+  "version": "1.0.0",
+  "description": "Optimize images for flower delivery platform",
+  "scripts": {
+    "optimize": "node optimize-images.js"
+  },
+  "dependencies": {
+    "sharp": "^0.33.0"
+  }
+}

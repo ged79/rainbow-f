@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            margin: 10px 0;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .quick-test {
+            background: #007bff;
+        }
+        .quick-test:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌸 Flower Delivery - Authentication Test</h1>
+    
+    <div class="test-section">
+        <h2>0. Quick Database Test</h2>
+        <button class="quick-test" onclick="testDatabase()">Test Database Insert</button>
+        <button class="quick-test" onclick="checkSystem()">Check System Status</button>
+        <div id="db-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>1. Test Signup (Simple)</h2>
+        <input type="text" id="signup-phone" placeholder="Phone (010-1234-5678)" value="010-1234-5678">
+        <input type="password" id="signup-password" placeholder="Password" value="test123">
+        <input type="text" id="signup-name" placeholder="Name" value="테스트유저">
+        <input type="email" id="signup-email" placeholder="Email (optional)" value="test@example.com">
+        <button onclick="testSignupSimple()">Test with Simple Endpoint</button>
+        <button onclick="testSignup()">Test with Original Endpoint</button>
+        <div id="signup-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Login</h2>
+        <input type="text" id="login-phone" placeholder="Phone (010-1234-5678)" value="010-1234-5678">
+        <input type="password" id="login-password" placeholder="Password" value="test123">
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Check Session</h2>
+        <button onclick="checkSession()">Check Current Session</button>
+        <div id="session-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+
+        async function testDatabase() {
+            const resultDiv = document.getElementById('db-result');
+            resultDiv.innerHTML = 'Testing database insert...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/test-insert`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Database Test Successful!</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Database Test Failed</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Network Error</div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        async function checkSystem() {
+            const resultDiv = document.getElementById('db-result');
+            resultDiv.innerHTML = 'Checking system status...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/test`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="${data.success ? 'success' : 'error'}">
+                        ${data.success ? '✅ System Status' : '❌ System Issues'}
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Network Error</div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        async function testSignupSimple() {
+            const resultDiv = document.getElementById('signup-result');
+            resultDiv.innerHTML = 'Testing signup with simple endpoint...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/test-insert`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: document.getElementById('signup-phone').value,
+                        password: document.getElementById('signup-password').value,
+                        name: document.getElementById('signup-name').value,
+                        email: document.getElementById('signup-email').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Signup Successful!</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Signup Failed</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Network Error</div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        async function testSignup() {
+            const resultDiv = document.getElementById('signup-result');
+            resultDiv.innerHTML = 'Testing signup...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: document.getElementById('signup-phone').value,
+                        password: document.getElementById('signup-password').value,
+                        name: document.getElementById('signup-name').value,
+                        email: document.getElementById('signup-email').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Signup Successful!</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Signup Failed</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Network Error</div>
+                    <pre>${error.message}</pre>
+                    <p>Make sure the dev server is running on port 3000</p>
+                `;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = 'Testing login...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include', // Important for cookies
+                    body: JSON.stringify({
+                        phone: document.getElementById('login-phone').value,
+                        password: document.getElementById('login-password').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Login Successful!</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    
+                    // Store session in localStorage (as your app does)
+                    if (data.member) {
+                        localStorage.setItem('flower-member', JSON.stringify(data.member));
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Login Failed</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ Network Error</div>
+                    <pre>${error.message}</pre>
+                    <p>Make sure the dev server is running on port 3000</p>
+                `;
+            }
+        }
+
+        function checkSession() {
+            const resultDiv = document.getElementById('session-result');
+            const session = localStorage.getItem('flower-member');
+            
+            if (session) {
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Session Found</div>
+                    <pre>${JSON.stringify(JSON.parse(session), null, 2)}</pre>
+                    <button onclick="clearSession()">Clear Session</button>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ No Session Found</div>
+                    <p>Please login first</p>
+                `;
+            }
+        }
+
+        function clearSession() {
+            localStorage.removeItem('flower-member');
+            document.getElementById('session-result').innerHTML = 
+                '<div class="success">✅ Session Cleared</div>';
+        }
+
+        // Auto-check system on load
+        window.onload = () => {
+            checkSystem();
+        };
+    </script>
+</body>
+</html>

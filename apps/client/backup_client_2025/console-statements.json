@@ -1,0 +1,528 @@
+[
+  {
+    "file": "src\\app\\(auth)\\register\\page.tsx",
+    "count": 8,
+    "locations": [
+      {
+        "line": 142,
+        "content": "console.log('Daum API Result:', result); // 디버깅용"
+      },
+      {
+        "line": 149,
+        "content": "console.log('Address parsing:', { sido, sigungu, dong });"
+      },
+      {
+        "line": 179,
+        "content": "console.log('Area to add:', areaToAdd);"
+      },
+      {
+        "line": 190,
+        "content": "console.log('Searching stores for areas:', areas);"
+      },
+      {
+        "line": 202,
+        "content": "console.log('Store search result:', { stores, error });"
+      },
+      {
+        "line": 210,
+        "content": "console.error('Failed to search stores:', error)"
+      },
+      {
+        "line": 229,
+        "content": "console.log('Toggle area:', area, 'New areas:', newAreas);"
+      },
+      {
+        "line": 243,
+        "content": "console.log('Toggle entire sido:', sido, 'New areas:', newAreas);"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\(dashboard)\\dashboard\\page.tsx",
+    "count": 2,
+    "locations": [
+      {
+        "line": 80,
+        "content": "console.error('Failed to load settlement info:', error)"
+      },
+      {
+        "line": 112,
+        "content": "console.error('Dashboard load error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\(dashboard)\\orders\\new\\page.tsx",
+    "count": 5,
+    "locations": [
+      {
+        "line": 117,
+        "content": "console.error('Failed to parse edit data:', error)"
+      },
+      {
+        "line": 130,
+        "content": "console.log('Daum Postcode loaded')"
+      },
+      {
+        "line": 175,
+        "content": "console.log('Searching stores:', { sido, sigungu })"
+      },
+      {
+        "line": 177,
+        "content": "console.log('Search result:', result)"
+      },
+      {
+        "line": 187,
+        "content": "console.error('화원 검색 실패:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\(dashboard)\\orders\\received\\page.tsx",
+    "count": 5,
+    "locations": [
+      {
+        "line": 71,
+        "content": "console.error('Orders load error:', error)"
+      },
+      {
+        "line": 86,
+        "content": "console.error('Accept error:', error)"
+      },
+      {
+        "line": 103,
+        "content": "console.error('Reject error:', error)"
+      },
+      {
+        "line": 206,
+        "content": "console.error('Photo upload failed:', photoError)"
+      },
+      {
+        "line": 234,
+        "content": "console.error('Complete error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\(dashboard)\\orders\\[id]\\page.tsx",
+    "count": 2,
+    "locations": [
+      {
+        "line": 173,
+        "content": "console.log('Photos to upload:', completionData.deliveryPhotos)"
+      },
+      {
+        "line": 182,
+        "content": "console.log('Complete result:', result)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\(dashboard)\\settlements\\page.tsx",
+    "count": 3,
+    "locations": [
+      {
+        "line": 114,
+        "content": "console.error('Failed to load settlements:', error)"
+      },
+      {
+        "line": 130,
+        "content": "console.warn(`Settlement ${settlementId} data mismatch:`, {"
+      },
+      {
+        "line": 143,
+        "content": "console.error('Failed to load settlement items:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\api\\auth\\login\\route.ts",
+    "count": 10,
+    "locations": [
+      {
+        "line": 6,
+        "content": "console.log('Login API called')"
+      },
+      {
+        "line": 10,
+        "content": "console.log('Login attempt for:', body.email)"
+      },
+      {
+        "line": 15,
+        "content": "console.log('Missing credentials')"
+      },
+      {
+        "line": 47,
+        "content": "console.log('Attempting Supabase auth...')"
+      },
+      {
+        "line": 54,
+        "content": "console.error('Supabase auth error:', error)"
+      },
+      {
+        "line": 62,
+        "content": "console.log('No user data returned')"
+      },
+      {
+        "line": 69,
+        "content": "console.log('Auth successful, fetching store...')"
+      },
+      {
+        "line": 79,
+        "content": "console.error('Store fetch error:', storeError)"
+      },
+      {
+        "line": 82,
+        "content": "console.log('Login successful:', {"
+      },
+      {
+        "line": 98,
+        "content": "console.error('Login API error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\api\\logs\\route.ts",
+    "count": 2,
+    "locations": [
+      {
+        "line": 15,
+        "content": "console.log('[Client Logs]', {"
+      },
+      {
+        "line": 24,
+        "content": "console.error('Failed to process logs:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\api\\orders\\[id]\\complete\\route.ts",
+    "count": 7,
+    "locations": [
+      {
+        "line": 40,
+        "content": "console.log('Server: received photos count:', photos.length)"
+      },
+      {
+        "line": 71,
+        "content": "console.log(`Uploading ${fileName}, size: ${buffer.length}`)"
+      },
+      {
+        "line": 79,
+        "content": "console.log('Upload result:', { data, error })"
+      },
+      {
+        "line": 88,
+        "content": "console.log('Photo URL:', publicUrl)"
+      },
+      {
+        "line": 91,
+        "content": "console.error('Photo upload error:', photoError)"
+      },
+      {
+        "line": 109,
+        "content": "console.error('Database update error:', error)"
+      },
+      {
+        "line": 115,
+        "content": "console.error('Complete order error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\api\\settlements\\route.ts",
+    "count": 1,
+    "locations": [
+      {
+        "line": 82,
+        "content": "console.error('Settlements API error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\api\\settlements\\[id]\\items\\route.ts",
+    "count": 2,
+    "locations": [
+      {
+        "line": 65,
+        "content": "console.error('Error fetching settlement items:', itemsError)"
+      },
+      {
+        "line": 124,
+        "content": "console.error('Settlement items API error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\api\\settlements-items\\[id]\\route.ts",
+    "count": 12,
+    "locations": [
+      {
+        "line": 39,
+        "content": "console.error('Settlement not found:', settlementError)"
+      },
+      {
+        "line": 56,
+        "content": "console.log(`Found ${items.length} items in settlement_items table for settlemen"
+      },
+      {
+        "line": 67,
+        "content": "console.log(`No items in settlement_items table, checking order_ids array...`)"
+      },
+      {
+        "line": 70,
+        "content": "console.log(`Found ${settlement.order_ids.length} order IDs in array`)"
+      },
+      {
+        "line": 80,
+        "content": "console.error('Error fetching orders:', ordersError)"
+      },
+      {
+        "line": 90,
+        "content": "console.warn(`Orders not found for IDs: ${settlement.order_ids}`)"
+      },
+      {
+        "line": 120,
+        "content": "console.log(`Transformed ${transformedItems.length} orders to items`)"
+      },
+      {
+        "line": 153,
+        "content": "console.error('Failed to insert settlement_items:', insertError)"
+      },
+      {
+        "line": 155,
+        "content": "console.log(`Successfully inserted ${itemsToInsert.length} new items into settle"
+      },
+      {
+        "line": 158,
+        "content": "console.log('No new items to insert - all already exist')"
+      },
+      {
+        "line": 173,
+        "content": "console.warn(`Settlement ${settlementId} has no order_ids array`)"
+      },
+      {
+        "line": 184,
+        "content": "console.error('Settlement items API error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\app\\api\\storage\\init\\route.ts",
+    "count": 2,
+    "locations": [
+      {
+        "line": 12,
+        "content": "console.error('Storage initialization error:', error)"
+      },
+      {
+        "line": 33,
+        "content": "console.error('Storage initialization error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\ErrorBoundary.tsx",
+    "count": 2,
+    "locations": [
+      {
+        "line": 35,
+        "content": "console.error('Error caught by boundary:', error, errorInfo)"
+      },
+      {
+        "line": 60,
+        "content": "console.log('Error logged:', errorData)"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\errors\\ErrorBoundary.tsx",
+    "count": 1,
+    "locations": [
+      {
+        "line": 29,
+        "content": "console.error('ErrorBoundary caught:', error, errorInfo)"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\OrderCompletionModal.tsx",
+    "count": 1,
+    "locations": [
+      {
+        "line": 80,
+        "content": "console.error('Completion error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\SettlementDetailsModal.tsx",
+    "count": 1,
+    "locations": [
+      {
+        "line": 85,
+        "content": "console.error('Error loading settlement items:', err)"
+      }
+    ]
+  },
+  {
+    "file": "src\\hooks\\useApi.ts",
+    "count": 1,
+    "locations": [
+      {
+        "line": 81,
+        "content": "onSuccess: (data) => console.log('Order loaded:', data),"
+      }
+    ]
+  },
+  {
+    "file": "src\\hooks\\useStoreSearch.ts",
+    "count": 2,
+    "locations": [
+      {
+        "line": 46,
+        "content": "console.warn(`Slow store search: ${searchResult.searchTime}ms`)"
+      },
+      {
+        "line": 131,
+        "content": "console.error('Autocomplete error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\lib\\errors\\api-error.ts",
+    "count": 1,
+    "locations": [
+      {
+        "line": 37,
+        "content": "console.error('API Error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\lib\\logger.ts",
+    "count": 3,
+    "locations": [
+      {
+        "line": 32,
+        "content": "console.debug(this.formatMessage('debug', message, context))"
+      },
+      {
+        "line": 44,
+        "content": "console.warn(this.formatMessage('warn', message, context))"
+      },
+      {
+        "line": 50,
+        "content": "console.error(this.formatMessage('error', message, context), errorObj)"
+      }
+    ]
+  },
+  {
+    "file": "src\\lib\\retry.ts",
+    "count": 1,
+    "locations": [
+      {
+        "line": 87,
+        "content": "console.log(`Retry attempt ${attempt} after error:`, error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\middleware.ts",
+    "count": 2,
+    "locations": [
+      {
+        "line": 92,
+        "content": "console.error('Session check error:', error)"
+      },
+      {
+        "line": 120,
+        "content": "console.error('Middleware error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\services\\imageStorage.ts",
+    "count": 5,
+    "locations": [
+      {
+        "line": 30,
+        "content": "console.log('Storage bucket verified: order-photos')"
+      },
+      {
+        "line": 33,
+        "content": "console.log('Storage bucket check:', error)"
+      },
+      {
+        "line": 148,
+        "content": "console.error('Upload error:', error)"
+      },
+      {
+        "line": 183,
+        "content": "console.error(`Failed to upload image ${i + 1}:`, error)"
+      },
+      {
+        "line": 202,
+        "content": "console.error('Delete error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\services\\logger.ts",
+    "count": 2,
+    "locations": [
+      {
+        "line": 81,
+        "content": "console.log("
+      },
+      {
+        "line": 89,
+        "content": "console.log(entry.stack)"
+      }
+    ]
+  },
+  {
+    "file": "src\\services\\storeService.ts",
+    "count": 4,
+    "locations": [
+      {
+        "line": 60,
+        "content": "console.error('Store search error:', error)"
+      },
+      {
+        "line": 85,
+        "content": "console.error('Store autocomplete error:', error)"
+      },
+      {
+        "line": 110,
+        "content": "console.error('Nearby stores error:', error)"
+      },
+      {
+        "line": 164,
+        "content": "console.error('Popular stores error:', error)"
+      }
+    ]
+  },
+  {
+    "file": "src\\utils\\imageUtils.ts",
+    "count": 4,
+    "locations": [
+      {
+        "line": 50,
+        "content": "console.log('Original size:', file.size, 'bytes')"
+      },
+      {
+        "line": 51,
+        "content": "console.log('Resized base64 length:', base64.length)"
+      },
+      {
+        "line": 52,
+        "content": "console.log('Estimated size:', Math.round(base64.length * 0.75 / 1024), 'KB')"
+      },
+      {
+        "line": 90,
+        "content": "console.log(`Compressed to ${sizeKB}KB with quality ${quality}`)"
+      }
+    ]
+  }
+]

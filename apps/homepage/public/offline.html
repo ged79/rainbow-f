@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오프라인 - 꽃배달 플랫폼</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .offline-container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .offline-icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 30px;
+      background: #f3f4f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+    }
+    
+    h1 {
+      color: #1f2937;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+    
+    p {
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+    
+    .retry-button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .retry-button:hover {
+      background: #059669;
+    }
+    
+    .offline-orders {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .offline-orders h2 {
+      font-size: 18px;
+      color: #374151;
+      margin-bottom: 10px;
+    }
+    
+    .offline-orders p {
+      font-size: 14px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">
+      🌸
+    </div>
+    <h1>인터넷 연결이 끊어졌습니다</h1>
+    <p>네트워크 연결을 확인해주세요.<br>연결이 복구되면 자동으로 다시 시도합니다.</p>
+    
+    <button class="retry-button" onclick="window.location.reload()">
+      다시 시도
+    </button>
+    
+    <div class="offline-orders" id="offlineOrders" style="display: none;">
+      <h2>대기 중인 주문</h2>
+      <p>연결이 복구되면 자동으로 처리됩니다.</p>
+    </div>
+  </div>
+  
+  <script>
+    // 오프라인 주문 확인
+    if ('indexedDB' in window) {
+      const request = indexedDB.open('FlowerDeliveryDB', 1);
+      request.onsuccess = function(event) {
+        const db = event.target.result;
+        if (db.objectStoreNames.contains('offlineOrders')) {
+          const transaction = db.transaction(['offlineOrders'], 'readonly');
+          const store = transaction.objectStore('offlineOrders');
+          const countRequest = store.count();
+          
+          countRequest.onsuccess = function() {
+            if (countRequest.result > 0) {
+              document.getElementById('offlineOrders').style.display = 'block';
+              document.querySelector('#offlineOrders p').textContent = 
+                `${countRequest.result}개의 주문이 대기 중입니다. 연결이 복구되면 자동으로 처리됩니다.`;
+            }
+          };
+        }
+      };
+    }
+    
+    // 온라인 상태 감지
+    window.addEventListener('online', function() {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

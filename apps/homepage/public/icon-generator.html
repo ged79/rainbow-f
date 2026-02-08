@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PWA 아이콘 생성기</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        canvas { border: 1px solid #ddd; margin: 5px; }
+        button { background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #059669; }
+        .icons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌸 꽃배달 PWA 아이콘 생성기</h1>
+        <p>각 캔버스를 우클릭 → "이미지로 저장"하여 PNG 파일로 저장하세요.</p>
+        <button onclick="generateIcons()">아이콘 생성</button>
+        <div class="icons" id="icons"></div>
+    </div>
+
+    <script>
+        function generateIcons() {
+            const sizes = [16, 32, 72, 96, 128, 144, 192, 384, 512];
+            const container = document.getElementById('icons');
+            container.innerHTML = '';
+
+            sizes.forEach(size => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // 배경 - 둥근 사각형
+                ctx.fillStyle = '#10b981';
+                const radius = size * 0.15;
+                ctx.beginPath();
+                ctx.moveTo(radius, 0);
+                ctx.lineTo(size - radius, 0);
+                ctx.quadraticCurveTo(size, 0, size, radius);
+                ctx.lineTo(size, size - radius);
+                ctx.quadraticCurveTo(size, size, size - radius, size);
+                ctx.lineTo(radius, size);
+                ctx.quadraticCurveTo(0, size, 0, size - radius);
+                ctx.lineTo(0, radius);
+                ctx.quadraticCurveTo(0, 0, radius, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                // 꽃 아이콘 (간단한 원형 꽃잎)
+                ctx.fillStyle = 'white';
+                const centerX = size / 2;
+                const centerY = size / 2;
+                const petalRadius = size * 0.12;
+                const centerRadius = size * 0.08;
+                
+                // 5개 꽃잎
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * 72 - 90) * Math.PI / 180;
+                    const x = centerX + Math.cos(angle) * (size * 0.2);
+                    const y = centerY + Math.sin(angle) * (size * 0.2);
+                    ctx.beginPath();
+                    ctx.arc(x, y, petalRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // 중앙 원
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 캔버스 추가
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = `<p>icon-${size}x${size}.png</p>`;
+                wrapper.appendChild(canvas);
+                container.appendChild(wrapper);
+
+                // 자동 다운로드 링크 생성
+                canvas.toBlob(blob => {
+                    const link = document.createElement('a');
+                    link.download = `icon-${size}x${size}.png`;
+                    link.href = URL.createObjectURL(blob);
+                    link.textContent = '다운로드';
+                    link.style.display = 'block';
+                    wrapper.appendChild(link);
+                });
+            });
+        }
+
+        // 페이지 로드시 자동 생성
+        window.onload = generateIcons;
+    </script>
+</body>
+</html>
