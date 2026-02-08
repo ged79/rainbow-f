@@ -404,6 +404,18 @@ export default function SecureOrderModal({
                       rows={3}
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">추천인 전화번호</label>
+                    <input
+                      type="tel"
+                      value={referrerPhone}
+                      onChange={(e) => setReferrerPhone(formatPhone(e.target.value))}
+                      className="w-full border rounded p-2"
+                      placeholder="010-0000-0000 (선택)"
+                    />
+                    <p className="text-xs text-green-600 mt-1">추천인 입력 시 포인트 5% 적립 (일반 3%)</p>
+                  </div>
                 </div>
               </div>
 
